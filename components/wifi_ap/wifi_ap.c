@@ -14,6 +14,7 @@
 #include "wifi_ap.h"
 
 
+#define PASSWORD_MIN_LEN    (8U)
 #define MAX_CLIENTS         (1U)
 #define WIFI_CHANNEL        (1U)
 
@@ -38,18 +39,30 @@ void wifi_ap_init(void)
 
 void wifi_ap_set_ssid(char *ssid, const uint8_t len)
 {
+    if ((len >= WIFI_AP_SSID_MAX_LEN) || (len <= 0U))
+    {
+        ESP_LOGW(tag, "----- SSID out of valid range -----");
+        return;
+    }
+    
     strncpy(wifi_ap_ssid, ssid, len);
     wifi_ap_ssid[len] = '\0';
 
-    ESP_LOGI(tag, "----- SSID HAS SET -----");
+    ESP_LOGI(tag, "----- SSID has set -----");
 }
 
 void wifi_ap_set_password(char *password, const uint8_t len)
 {
+    if ((len >= WIFI_AP_PASSWORD_MAX_LEN) || (len < PASSWORD_MIN_LEN))
+    {
+        ESP_LOGW(tag, "----- Password out of valid range -----");
+        return;
+    }
+    
     strncpy(wifi_ap_password, password, len);
     wifi_ap_password[len] = '\0';
 
-    ESP_LOGI(tag, "----- PASSWORD HAS SET -----");
+    ESP_LOGI(tag, "----- Password has set -----");
 }
 
 static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
