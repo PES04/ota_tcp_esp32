@@ -9,7 +9,6 @@ static const char *tag = "MAIN";
 
 void app_main(void)
 {
-    sys_initializer_run();
-    
-    wifi_ap_init();
+  sys_initializer_init();
+  wifi_ap_init();
 }
