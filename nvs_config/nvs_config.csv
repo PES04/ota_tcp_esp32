@@ -1,0 +1,6 @@
+key,type,encoding,value
+wifi_ap_config,namespace,,
+wifi_params,file,binary,nvs_config/wifi_params.txt
+tls_config,namespace,,
+server_crt,file,binary,nvs_config/server.crt
+server_key,file,binary,nvs_config/server.key

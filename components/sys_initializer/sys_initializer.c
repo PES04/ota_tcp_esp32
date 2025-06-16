@@ -33,8 +33,7 @@ void sys_initializer_init(void)
 
 static void sys_initializer_wifi(void)
 {
-    char ssid[WIFI_AP_SSID_MAX_LEN] = {};
-    char password[WIFI_AP_PASSWORD_MAX_LEN] = {};
+    char wifi_config[WIFI_AP_SSID_MAX_LEN + WIFI_AP_PASSWORD_MAX_LEN] = {};
 
     nvs_handle_t nvs_handle = 0;
     esp_err_t ret = nvs_open("wifi_ap_config", NVS_READONLY, &nvs_handle);
@@ -46,29 +45,26 @@ static void sys_initializer_wifi(void)
     else
     {
         /* SSID initialization */
-        size_t ssid_len = sizeof(ssid);
-        ret = nvs_get_str(nvs_handle, "ssid", ssid, &ssid_len);
+        size_t wifi_config_len = sizeof(wifi_config);
+        ret = nvs_get_blob(nvs_handle, "wifi_params", wifi_config, &wifi_config_len);
 
         if (ret != ESP_OK)
         {
-            ESP_LOGW(tag, "----- Can not read ssid -----");
+            ESP_LOGW(tag, "----- Can not read wifi parameters -----");
         }
         else
         {
-            wifi_ap_set_ssid(ssid, strlen(ssid));
-        }
+            char *token = strtok(wifi_config, ";");
+            if (token != NULL)
+            {
+                wifi_ap_set_ssid(token, strlen(token));
+            }
 
-        /* Password initialization */
-        size_t password_len = sizeof(password);
-        ret = nvs_get_str(nvs_handle, "password", password, &password_len);
-
-        if (ret != ESP_OK)
-        {
-            ESP_LOGW(tag, "----- Can not read password -----");
-        }
-        else
-        {
-            wifi_ap_set_password(password, strlen(password));
+            token = strtok(NULL, ";");
+            if (token != NULL)
+            {
+                wifi_ap_set_password(token, strlen(token));
+            }
         }
 
         nvs_close(nvs_handle);

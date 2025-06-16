@@ -1,4 +1,5 @@
 .vscode
 build
 sdkconfig.*
-nvs_config
+nvs_config/*
+!nvs_config/nvs_config.csv
