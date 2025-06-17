@@ -46,13 +46,14 @@ void tcp_tls_init(void)
 
 void tcp_tls_set_server_ctr(const uint8_t *crt, const size_t len)
 {
-    if ((has_server_crt_set == true) || (len > TCP_TLS_MAX_BUFFER_LEN))
+    if ((has_server_crt_set == true) || (len >= TCP_TLS_MAX_BUFFER_LEN))
     {
         return;
     }
 
     memcpy(server_crt.val, crt, len);
-    server_crt.len = len;
+    server_crt.val[len] = '\0'; /* Needed to mbedtls */
+    server_crt.len = len + 1U;
 
     has_server_crt_set = true;
     xSemaphoreGive(semphr_sync);
@@ -62,13 +63,14 @@ void tcp_tls_set_server_ctr(const uint8_t *crt, const size_t len)
 
 void tcp_tls_set_server_key(const uint8_t *key, const size_t len)
 {
-    if ((has_server_key_set == true) || (len > TCP_TLS_MAX_BUFFER_LEN))
+    if ((has_server_key_set == true) || (len >= TCP_TLS_MAX_BUFFER_LEN))
     {
         return;
     }
 
     memcpy(server_key.val, key, len);
-    server_key.len = len;
+    server_key.val[len] = '\0'; /* Needed to mbedtls */
+    server_key.len = len + 1U;
 
     has_server_key_set = true;
     xSemaphoreGive(semphr_sync);
@@ -108,7 +110,7 @@ static void tcp_tls_task(void * params)
         return;
     }
 
-    ESP_LOGI(tag, "----- Listening socket -----");
+    ESP_LOGI(tag, "----- Creating listening socket -----");
     ret = listen(listen_sock, 1);
     if (ret != 0)
     {
@@ -127,14 +129,29 @@ static void tcp_tls_task(void * params)
         if (sock < 0)
         {
             ESP_LOGE(tag, "----- Unable to accept the connection -----");
-            continue;;
+            continue;
+        }
+
+        esp_tls_t *tls = esp_tls_init();
+        if (tls == NULL)
+        {
+            ESP_LOGE(tag, "----- Unable to create TLS section -----");
+            close(sock);
+            continue;
+        }
+
+        if (esp_tls_server_session_create(&server_cfg, sock, tls) != 0)
+        {
+            ESP_LOGE(tag, "----- Unable to establish TLS connection -----");
+            esp_tls_conn_destroy(tls);
+            continue;
         }
 
         uint8_t rx_buffer[64] = {};
 
         while (1)
         {
-            int32_t len = recv(sock, rx_buffer, sizeof(rx_buffer) - 1, 0);
+            int32_t len = esp_tls_conn_read(tls, rx_buffer, sizeof(rx_buffer) - 1);
             if (len < 0)
             {
                 ESP_LOGE(tag, "----- Receving error -----");
@@ -154,7 +171,7 @@ static void tcp_tls_task(void * params)
 
         ESP_LOGI(tag, "----- Closing socket -----");
 
-        close(sock);
+        esp_tls_conn_destroy(tls);
     }
 
     ESP_LOGI(tag, "----- Closing listening socket -----");
