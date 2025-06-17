@@ -1,3 +1,3 @@
 idf_component_register(SRCS "tcp_tls.c"
                     INCLUDE_DIRS "include"
-                    PRIV_REQUIRES esp-tls)
+                    PRIV_REQUIRES esp-tls ota_manager)
