@@ -11,10 +11,13 @@
 static const char *tag = "SYS_INITIALIZER";
 
 
-static void sys_initializer_wifi(void);
-static void sys_initializer_tcp_tls(void);
+static void init_wifi_params(void);
+static void init_tcp_tls_params(void);
 
-
+/**
+ * @brief Initialize the sys_initializer component
+ * 
+ */
 void sys_initializer_init(void)
 {
     ESP_LOGI(tag, "----- Initializing NVS -----");
@@ -27,11 +30,15 @@ void sys_initializer_init(void)
 
     ESP_LOGI(tag, "----- NVS initialized -----");
     
-    sys_initializer_wifi();
-    sys_initializer_tcp_tls();
+    init_wifi_params();
+    init_tcp_tls_params();
 }
 
-static void sys_initializer_wifi(void)
+/**
+ * @brief Initialize the wifi parameters
+ * 
+ */
+static void init_wifi_params(void)
 {
     char wifi_config[WIFI_AP_SSID_MAX_LEN + WIFI_AP_PASSWORD_MAX_LEN] = {};
 
@@ -71,7 +78,11 @@ static void sys_initializer_wifi(void)
     }
 }
 
-static void sys_initializer_tcp_tls(void)
+/**
+ * @brief Initialize the TLS connection asssets
+ * 
+ */
+static void init_tcp_tls_params(void)
 {
     nvs_handle_t nvs_handle = 0;
     esp_err_t ret = nvs_open("tls_config", NVS_READONLY, &nvs_handle);
@@ -93,7 +104,7 @@ static void sys_initializer_tcp_tls(void)
         }
         else
         {
-         tcp_tls_set_server_ctr(buffer, buffer_len);
+         tcp_tls_set_server_crt(buffer, buffer_len);
         }
 
         /* Server key initialization */

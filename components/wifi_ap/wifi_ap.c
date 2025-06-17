@@ -14,15 +14,15 @@
 #include "wifi_ap.h"
 
 
-#define PASSWORD_MIN_LEN    (8U)
+#define PASSWORD_MIN_LEN    (8U) /* Min length of Wi-Fi API. Don't choose less than 8 bytes */
 #define MAX_CLIENTS         (1U)
 #define WIFI_CHANNEL        (1U)
 
 
 static const char *tag = "WIFI_AP";
 
-static char wifi_ap_ssid[WIFI_AP_SSID_MAX_LEN] = "Default";
-static char wifi_ap_password[WIFI_AP_PASSWORD_MAX_LEN] = "default123";
+static char wifi_ap_ssid[WIFI_AP_SSID_MAX_LEN] = "Default"; /* Default value if it's not set */
+static char wifi_ap_password[WIFI_AP_PASSWORD_MAX_LEN] = "default123"; /* Default value if it's not set */
 
 
 /* ---------------------------- Private Function ---------------------------- */
@@ -31,12 +31,22 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t e
 /* -------------------------------------------------------------------------- */
 
 
+/**
+ * @brief Initialize wifi_ap component
+ * 
+ */
 void wifi_ap_init(void)
 {
     ESP_LOGI(tag, "----- Initializing Wi-Fi in AP Mode -----");
     wifi_init_softap();
 }
 
+/**
+ * @brief SSID setter
+ * 
+ * @param ssid [in]: Wi-Fi AP SSID
+ * @param len [in]: SSID length
+ */
 void wifi_ap_set_ssid(char *ssid, const uint8_t len)
 {
     if ((len >= WIFI_AP_SSID_MAX_LEN) || (len <= 0U))
@@ -51,6 +61,12 @@ void wifi_ap_set_ssid(char *ssid, const uint8_t len)
     ESP_LOGI(tag, "----- SSID has set -----");
 }
 
+/**
+ * @brief Password setter
+ * 
+ * @param password [in]: Wi-Fi AP password
+ * @param len [in]: Password length
+ */
 void wifi_ap_set_password(char *password, const uint8_t len)
 {
     if ((len >= WIFI_AP_PASSWORD_MAX_LEN) || (len < PASSWORD_MIN_LEN))
@@ -65,22 +81,30 @@ void wifi_ap_set_password(char *password, const uint8_t len)
     ESP_LOGI(tag, "----- Password has set -----");
 }
 
+/**
+ * @brief ESP-IDF Wi-Fi event handler 
+ * 
+ */
 static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
 {
     if (event_id == WIFI_EVENT_AP_STACONNECTED) 
     {
         wifi_event_ap_staconnected_t* event = (wifi_event_ap_staconnected_t*) event_data;
-        ESP_LOGI(tag, "station "MACSTR" join, AID=%d",
+        ESP_LOGI(tag, "----- Station "MACSTR" join, AID=%d -----",
                  MAC2STR(event->mac), event->aid);
     } 
     else if (event_id == WIFI_EVENT_AP_STADISCONNECTED) 
     {
         wifi_event_ap_stadisconnected_t* event = (wifi_event_ap_stadisconnected_t*) event_data;
-        ESP_LOGI(tag, "station "MACSTR" leave, AID=%d, reason=%d",
+        ESP_LOGI(tag, "----- Station "MACSTR" leave, AID=%d, reason=%d -----",
                  MAC2STR(event->mac), event->aid, event->reason);
     }
 }
 
+/**
+ * @brief Initialize Wi-Fi in AP configuration
+ * 
+ */
 static void wifi_init_softap(void)
 {
     esp_netif_init();

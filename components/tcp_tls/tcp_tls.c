@@ -31,6 +31,10 @@ static SemaphoreHandle_t semphr_sync = NULL;
 static void tcp_tls_task(void * params);
 /* --------------------------------------------------------- */
 
+/**
+ * @brief Initialize the tcp_tls component
+ * 
+ */
 void tcp_tls_init(void)
 {
     semphr_sync = xSemaphoreCreateCounting(COUNT_NEEDED_TO_START_TCP_SOCKET, 0);
@@ -44,7 +48,13 @@ void tcp_tls_init(void)
     xTaskCreate(tcp_tls_task, "tcp_tls_task", 4096, NULL, 4, NULL);
 }
 
-void tcp_tls_set_server_ctr(const uint8_t *crt, const size_t len)
+/**
+ * @brief Server_crt setter
+ * 
+ * @param crt [in]: Server certificate
+ * @param len [in]: Server certificate length in bytes
+ */
+void tcp_tls_set_server_crt(const uint8_t *crt, const size_t len)
 {
     if ((has_server_crt_set == true) || (len >= TCP_TLS_MAX_BUFFER_LEN))
     {
@@ -61,6 +71,12 @@ void tcp_tls_set_server_ctr(const uint8_t *crt, const size_t len)
     ESP_LOGI(tag, "----- Server certificate has set -----");
 }
 
+/**
+ * @brief Server_key setter
+ * 
+ * @param key [in]: Server key
+ * @param len [in]: Server key length in bytes
+ */
 void tcp_tls_set_server_key(const uint8_t *key, const size_t len)
 {
     if ((has_server_key_set == true) || (len >= TCP_TLS_MAX_BUFFER_LEN))
@@ -78,6 +94,11 @@ void tcp_tls_set_server_key(const uint8_t *key, const size_t len)
     ESP_LOGI(tag, "----- Server key has set -----");
 }
 
+/**
+ * @brief TLS main task
+ * 
+ * @param params [in]: Task parameters
+ */
 static void tcp_tls_task(void * params)
 {
     while (uxSemaphoreGetCount(semphr_sync) != COUNT_NEEDED_TO_START_TCP_SOCKET)
