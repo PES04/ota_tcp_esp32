@@ -1,0 +1,78 @@
+#include "auth_hmac.h"
+
+#include <string.h>
+#include "esp_log.h"
+#include "esp_random.h"
+#include "mbedtls/md.h"
+
+static const char *tag = "AUTH_HMAC";
+
+/**
+ * @brief Generate a random nounce for HMAC authentication
+ * 
+ * @param nounce [out]: Pointer to the buffer where the nounce will be stored
+ * @param len [in]: Length of the nounce in bytes
+ */
+void auth_hmac_generate_nounce(uint8_t *nounce, size_t len)
+{
+  esp_fill_random(nounce, len); // Fill nounce param with random bytes
+  ESP_LOGI(tag, "----- Nounce generated -----");
+}
+
+/**
+ * @brief Verify the HMAC response using the nounce and shared key
+ * 
+ * @param nounce [in]: Pointer to the nounce used for HMAC generation
+ * @param nounce_len [in]: Length of the nounce in bytes
+ * @param received_hmac [in]: Pointer to the received HMAC response
+ * @param received_len [in]: Length of the received HMAC response in bytes
+ * @return true if the HMAC is valid, false otherwise
+ */
+bool auth_hmac_verify_response(const uint8_t *nounce, size_t nounce_len, const uint8_t *received_hmac, size_t received_len)
+{
+  ESP_LOGI(tag, "----- Starting HMAC verification -----");
+
+  if (received_len != HMAC_SHA256_LEN) // Sanity check for HMAC length
+  {
+    ESP_LOGW(tag, "----- Invalid HMAC response length -----");
+    return false;
+  }
+
+  uint8_t calculated_hmac[HMAC_SHA256_LEN] = {0};
+  const mbedtls_md_info_t *md_info = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256); // Use SHA-256 for HMAC
+  if (md_info == NULL)
+  {
+    ESP_LOGE(tag, "----- mbedtls_md_info_from_type failed -----");
+    return false;
+  }
+
+  mbedtls_md_context_t ctx;
+  mbedtls_md_init(&ctx);
+
+  if (mbedtls_md_setup(&ctx, md_info, 1) != 0) // enable HMAC
+  {
+    ESP_LOGE(tag, "----- mbedtls_md_setup failed -----");
+    mbedtls_md_free(&ctx);
+    return false;
+  }
+
+  if (mbedtls_md_hmac_starts(&ctx, (const unsigned char *)HMAC_SHARED_KEY, strlen(HMAC_SHARED_KEY)) != 0 || // Initialize HMAC with shared key
+      mbedtls_md_hmac_update(&ctx, nounce, nounce_len) != 0 || // Update with nounce
+      mbedtls_md_hmac_finish(&ctx, calculated_hmac) != 0) // Compute HMAC
+  {
+    ESP_LOGE(tag, "----- Error during HMAC computation -----");
+    mbedtls_md_free(&ctx);
+    return false;
+  }
+
+  mbedtls_md_free(&ctx); 
+
+  bool valid = memcmp(received_hmac, calculated_hmac, HMAC_SHA256_LEN) == 0; // Compare received HMAC with calculated HMAC memories
+
+  if (valid)
+    ESP_LOGI(tag, "----- HMAC successfully verified -----");
+  else
+    ESP_LOGW(tag, "----- Invalid HMAC -----");
+
+  return valid;
+}
