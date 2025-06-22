@@ -2,13 +2,8 @@
 #define TYPES_H
 
 typedef enum {
-    SM_SUCCESS,
-    SM_IN_PROGRESS,
-    SM_ERROR
-} types_ret_state_machine_e;
-
-typedef enum {
     ERR_OK,
+    ERR_IN_PROGRESS,
     ERR_FAIL,
     ERR_INVALID_PARAM,
     ERR_INVALID_OP

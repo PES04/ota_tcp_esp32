@@ -22,15 +22,15 @@ typedef enum {
 static void parse_header(uint8_t * p_data, uint32_t * p_firmware_size, uint8_t * p_hash);
 
 
-types_ret_state_machine_e msg_parser_run(uint8_t * p_data, const uint16_t len)
+types_error_code_e msg_parser_run(uint8_t * p_data, const uint16_t len)
 {
     static msg_parser_states_e state = READ_HEADER;
 
-    static uint32_t firmware_size = 0;
-    static uint32_t firmware_bytes_read = 0;
+    static uint32_t firmware_size = 0U;
+    static uint32_t firmware_bytes_read = 0U;
     static uint8_t hash[HASH_SIZE_IN_BYTES] = {};
 
-    types_ret_state_machine_e status = SM_IN_PROGRESS;
+    types_error_code_e status = ERR_IN_PROGRESS;
 
     switch (state)
     {
@@ -49,37 +49,32 @@ types_ret_state_machine_e msg_parser_run(uint8_t * p_data, const uint16_t len)
             /* Fallthrough */
 
         case WRITE_FIRMWARE:
+        {
             firmware_bytes_read += len;
-            
-            if (firmware_bytes_read > firmware_size)
+
+            types_error_code_e err = ERR_OK; /* Call OTA write here */
+
+            if ((err == ERR_OK) || (err == ERR_FAIL))
             {
-                status = SM_ERROR;
-                break;
+                /* Clean parameters */
+                firmware_size = 0;
+                firmware_bytes_read = 0;
+                memset(hash, 0, sizeof(hash));
+
+                /* Call OTA end here */
+
+                state = READ_HEADER;
+                status = err;
             }
-
-            /* Apply OTA here */
-            if (1 /* OTA not end */)
-            {
-                break;
-            }
-            /* Fallthrough */
-
-        case END_OTA:
-            /* Stop OTA here */
-        //Fallthrough
-
-        case CLEAN_PARAMS:
-            firmware_size = 0;
-            firmware_bytes_read = 0;
-            memset(hash, 0, sizeof(hash));
+        }
         break;
 
         default:
-            state = SM_ERROR;
+            status = ERR_FAIL;
         break;
     }
 
-    return state;
+    return status;
 }
 
 static void parse_header(uint8_t * p_data, uint32_t * p_firmware_size, uint8_t * p_hash)
