@@ -6,6 +6,7 @@
 #include "esp_log.h"
 #include "lwip/sockets.h"
 #include "esp_tls.h"
+#include "msg_parser.h"
 #include "tcp_tls.h"
 
 
@@ -191,6 +192,8 @@ static void tcp_tls_task(void * params)
             {
                 rx_buffer[len] = '\0';
                 printf("Recebido %ld bytes: \"%s\"\n", len, (char *)rx_buffer);
+
+                msg_parser_run(rx_buffer, len);
             }
         }
 

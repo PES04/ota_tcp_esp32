@@ -1,3 +1,4 @@
 idf_component_register(SRCS "msg_parser.c"
                     INCLUDE_DIRS "include"
-                    PRIV_REQUIRES types)
+                    PRIV_REQUIRES
+                    REQUIRES types)

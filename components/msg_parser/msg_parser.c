@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "types.h"
 #include "msg_parser.h"
 
 
@@ -13,9 +12,7 @@
 typedef enum {  
     READ_HEADER,
     START_OTA,
-    WRITE_FIRMWARE,
-    END_OTA,
-    CLEAN_PARAMS
+    WRITE_FIRMWARE
 } msg_parser_states_e;
 
 
@@ -30,7 +27,7 @@ types_error_code_e msg_parser_run(uint8_t * p_data, const uint16_t len)
     static uint32_t firmware_bytes_read = 0U;
     static uint8_t hash[HASH_SIZE_IN_BYTES] = {};
 
-    types_error_code_e status = ERR_IN_PROGRESS;
+    types_error_code_e status = ERR_CODE_IN_PROGRESS;
 
     switch (state)
     {
@@ -52,9 +49,9 @@ types_error_code_e msg_parser_run(uint8_t * p_data, const uint16_t len)
         {
             firmware_bytes_read += len;
 
-            types_error_code_e err = ERR_OK; /* Call OTA write here */
+            types_error_code_e err = ERR_CODE_OK; /* Call OTA write here */
 
-            if ((err == ERR_OK) || (err == ERR_FAIL))
+            if ((err == ERR_CODE_OK) || (err == ERR_CODE_FAIL))
             {
                 /* Clean parameters */
                 firmware_size = 0;
@@ -70,7 +67,7 @@ types_error_code_e msg_parser_run(uint8_t * p_data, const uint16_t len)
         break;
 
         default:
-            status = ERR_FAIL;
+            status = ERR_CODE_FAIL;
         break;
     }
 
