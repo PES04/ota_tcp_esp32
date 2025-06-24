@@ -150,14 +150,6 @@ static void tcp_tls_task(void * params)
                 rx_buffer[len] = '\0';
                 printf("Recebido %ld bytes: \"%s\"\n", len, (char *)rx_buffer);
 
-                // Write OTA
-                if (ota_write_firmware(rx_buffer, len) == ESP_OK) {
-                    ESP_LOGI(tag, "ESP Firmware written successfully");
-                    vTaskDelay(pdMS_TO_TICKS(500));
-                    esp_restart();
-                } else {
-                    ESP_LOGE(tag, "ESP Firmware failed to update");
-                }
             }
         }
 

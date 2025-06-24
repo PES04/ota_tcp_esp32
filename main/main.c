@@ -10,7 +10,7 @@ static const char *tag = "MAIN";
 
 void app_main(void)
 {
-    ota_rollback();
+    ota_check_rollback();
 
     tcp_tls_init();
     
