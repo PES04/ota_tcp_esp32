@@ -3,14 +3,15 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "freertos/semphr.h"
 #include "esp_log.h"
 #include "lwip/sockets.h"
 #include "esp_tls.h"
+#include "msg_parser.h"
 #include "tcp_tls.h"
 #include "ota_manager.h"
 
-#define COUNT_NEEDED_TO_START_TCP_SOCKET      (2U)
+#define COUNT_NEEDED_TO_START_TCP_SOCKET        (2U)
+#define TCP_BUFFER_LEN_BYTES                    (2048U)
 
 
 typedef struct {
@@ -23,66 +24,94 @@ static const char *tag = "TCP_TLS";
 
 static crypt_buffer_t server_crt = {};
 static crypt_buffer_t server_key = {};
-static bool has_server_crt_set = false;
-static bool has_server_key_set = false;
-static SemaphoreHandle_t semphr_sync = NULL;
 
 /* ------------------- Private Functions ------------------- */
 static void tcp_tls_task(void * params);
 /* --------------------------------------------------------- */
 
+/**
+ * @brief Initialize the tcp_tls component
+ * 
+ */
 void tcp_tls_init(void)
 {
-    semphr_sync = xSemaphoreCreateCounting(COUNT_NEEDED_TO_START_TCP_SOCKET, 0);
-    if (semphr_sync == NULL)
-    {
-        ESP_LOGE(tag, "----- Error creating sync semaphore -----");
-        return;
-    }
-
     ESP_LOGI(tag, "----- Initializing tcp_tls task -----");
-    xTaskCreate(tcp_tls_task, "tcp_tls_task", 4096, NULL, 4, NULL);
+    xTaskCreate(tcp_tls_task, "tcp_tls_task", 8192, NULL, 4, NULL);
 }
 
-void tcp_tls_set_server_ctr(const uint8_t *crt, const size_t len)
+/**
+ * @brief Server_crt setter
+ * 
+ * @param crt [in]: Server certificate
+ * @param len [in]: Server certificate length in bytes
+ */
+esp_err_t tcp_tls_set_server_crt(const uint8_t *crt, const size_t len)
 {
-    if ((has_server_crt_set == true) || (len > TCP_TLS_MAX_BUFFER_LEN))
+    static bool has_server_crt_set = false;
+    
+    if (has_server_crt_set == true)
     {
-        return;
+        ESP_LOGE(tag, "----- Server certificate already set -----");
+        return ESP_ERR_NOT_ALLOWED;
+    }
+
+    if (len >= TCP_TLS_MAX_BUFFER_LEN)
+    {
+        ESP_LOGE(tag, "----- Server certificate invalid range -----");
+        return ESP_ERR_INVALID_ARG;
     }
 
     memcpy(server_crt.val, crt, len);
-    server_crt.len = len;
+    server_crt.val[len] = '\0'; /* Needed to mbedtls */
+    server_crt.len = len + 1U;
 
     has_server_crt_set = true;
-    xSemaphoreGive(semphr_sync);
 
     ESP_LOGI(tag, "----- Server certificate has set -----");
+
+    return ESP_OK;
 }
 
-void tcp_tls_set_server_key(const uint8_t *key, const size_t len)
+/**
+ * @brief Server_key setter
+ * 
+ * @param key [in]: Server key
+ * @param len [in]: Server key length in bytes
+ */
+esp_err_t tcp_tls_set_server_key(const uint8_t *key, const size_t len)
 {
-    if ((has_server_key_set == true) || (len > TCP_TLS_MAX_BUFFER_LEN))
+    static bool has_server_key_set = false;
+    
+    if (has_server_key_set == true)
     {
-        return;
+        ESP_LOGE(tag, "----- Server key already set -----");
+        return ESP_ERR_NOT_ALLOWED;
+    }
+    
+    if (len >= TCP_TLS_MAX_BUFFER_LEN)
+    {
+        ESP_LOGE(tag, "----- Server key invalid range -----");
+        return ESP_ERR_INVALID_ARG;
     }
 
     memcpy(server_key.val, key, len);
-    server_key.len = len;
+    server_key.val[len] = '\0'; /* Needed to mbedtls */
+    server_key.len = len + 1U;
 
     has_server_key_set = true;
-    xSemaphoreGive(semphr_sync);
 
     ESP_LOGI(tag, "----- Server key has set -----");
+
+    return ESP_OK;
 }
 
+/**
+ * @brief TLS main task
+ * 
+ * @param params [in]: Task parameters
+ */
 static void tcp_tls_task(void * params)
 {
-    while (uxSemaphoreGetCount(semphr_sync) != COUNT_NEEDED_TO_START_TCP_SOCKET)
-    {
-        vTaskDelay(pdMS_TO_TICKS(250));
-    }
-    
     ESP_LOGI(tag, "----- Creating socket -----");
     int listen_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
 
@@ -108,7 +137,7 @@ static void tcp_tls_task(void * params)
         return;
     }
 
-    ESP_LOGI(tag, "----- Listening socket -----");
+    ESP_LOGI(tag, "----- Creating listening socket -----");
     ret = listen(listen_sock, 1);
     if (ret != 0)
     {
@@ -127,14 +156,29 @@ static void tcp_tls_task(void * params)
         if (sock < 0)
         {
             ESP_LOGE(tag, "----- Unable to accept the connection -----");
-            continue;;
+            continue;
         }
 
-        uint8_t rx_buffer[64] = {};
+        esp_tls_t *tls = esp_tls_init();
+        if (tls == NULL)
+        {
+            ESP_LOGE(tag, "----- Unable to create TLS section -----");
+            close(sock);
+            continue;
+        }
+
+        if (esp_tls_server_session_create(&server_cfg, sock, tls) != 0)
+        {
+            ESP_LOGE(tag, "----- Unable to establish TLS connection -----");
+            esp_tls_conn_destroy(tls);
+            continue;
+        }
+
+        uint8_t rx_buffer[TCP_BUFFER_LEN_BYTES] = {};
 
         while (1)
         {
-            int32_t len = recv(sock, rx_buffer, sizeof(rx_buffer) - 1, 0);
+            int32_t len = esp_tls_conn_read(tls, rx_buffer, sizeof(rx_buffer) - 1);
             if (len < 0)
             {
                 ESP_LOGE(tag, "----- Receving error -----");
@@ -147,15 +191,14 @@ static void tcp_tls_task(void * params)
             }
             else
             {
-                rx_buffer[len] = '\0';
-                printf("Recebido %ld bytes: \"%s\"\n", len, (char *)rx_buffer);
 
+                msg_parser_run(rx_buffer, len);
             }
         }
 
         ESP_LOGI(tag, "----- Closing socket -----");
 
-        close(sock);
+        esp_tls_conn_destroy(tls);
     }
 
     ESP_LOGI(tag, "----- Closing listening socket -----");

@@ -6,8 +6,8 @@
 
 void wifi_ap_init(void);
 
-void wifi_ap_set_ssid(char *ssid, const uint8_t len);
+esp_err_t wifi_ap_set_ssid(char *ssid, const uint8_t len);
 
-void wifi_ap_set_password(char *password, const uint8_t len);
+esp_err_t wifi_ap_set_password(char *password, const uint8_t len);
 
 #endif
