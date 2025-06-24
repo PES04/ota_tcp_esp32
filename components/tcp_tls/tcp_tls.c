@@ -6,10 +6,12 @@
 #include "esp_log.h"
 #include "lwip/sockets.h"
 #include "esp_tls.h"
+#include "msg_parser.h"
 #include "tcp_tls.h"
 
 
-#define COUNT_NEEDED_TO_START_TCP_SOCKET      (2U)
+#define COUNT_NEEDED_TO_START_TCP_SOCKET        (2U)
+#define TCP_BUFFER_LEN_BYTES                    (2048U)
 
 
 typedef struct {
@@ -34,7 +36,7 @@ static void tcp_tls_task(void * params);
 void tcp_tls_init(void)
 {
     ESP_LOGI(tag, "----- Initializing tcp_tls task -----");
-    xTaskCreate(tcp_tls_task, "tcp_tls_task", 4096, NULL, 4, NULL);
+    xTaskCreate(tcp_tls_task, "tcp_tls_task", 8192, NULL, 4, NULL);
 }
 
 /**
@@ -172,7 +174,7 @@ static void tcp_tls_task(void * params)
             continue;
         }
 
-        uint8_t rx_buffer[64] = {};
+        uint8_t rx_buffer[TCP_BUFFER_LEN_BYTES] = {};
 
         while (1)
         {
@@ -189,8 +191,7 @@ static void tcp_tls_task(void * params)
             }
             else
             {
-                rx_buffer[len] = '\0';
-                printf("Recebido %ld bytes: \"%s\"\n", len, (char *)rx_buffer);
+                msg_parser_run(rx_buffer, len);
             }
         }
 
