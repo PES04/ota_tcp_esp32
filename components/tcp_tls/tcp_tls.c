@@ -151,7 +151,7 @@ static void tcp_tls_task(void * params)
         struct sockaddr_storage source_addr = {};
         socklen_t addr_len = sizeof(source_addr);
 
-        ESP_LOGI(tag, "----- Wainting for a connection -----");
+        ESP_LOGI(tag, "----- Waiting for a connection -----");
         int sock = accept(listen_sock, (struct sockaddr *)&source_addr, &addr_len);
         if (sock < 0)
         {
@@ -191,7 +191,6 @@ static void tcp_tls_task(void * params)
             }
             else
             {
-
                 msg_parser_run(rx_buffer, len);
             }
         }

@@ -83,7 +83,7 @@ static esp_err_t init_wifi_params(void)
         }
     }
 
-    /* SSID Parsing */
+    /* Password Parsing */
     token = strtok(NULL, ";");
     if (token == NULL)
     {
