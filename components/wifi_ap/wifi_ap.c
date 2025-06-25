@@ -45,20 +45,20 @@ void wifi_ap_init(void)
  * @param ssid [in]: Wi-Fi AP SSID
  * @param len [in]: SSID length
  */
-esp_err_t wifi_ap_set_ssid(char *ssid, const uint8_t len)
+types_error_code_e wifi_ap_set_ssid(char *ssid, const uint8_t len)
 {
     static bool has_ssid_set = false;
     
     if (has_ssid_set)
     {
         ESP_LOGE(tag, "----- Wi-Fi SSID already set -----");
-        return ESP_ERR_NOT_ALLOWED;
+        return ERR_CODE_NOT_ALLOWED;
     }
 
     if ((len >= WIFI_AP_SSID_MAX_LEN) || (len <= 0U))
     {
         ESP_LOGE(tag, "----- Wi-Fi SSID out of valid range -----");
-        return ESP_ERR_INVALID_ARG;
+        return ERR_CODE_INVALID_PARAM;
     }
     
     strncpy(wifi_ap_ssid, ssid, len);
@@ -68,7 +68,7 @@ esp_err_t wifi_ap_set_ssid(char *ssid, const uint8_t len)
 
     ESP_LOGI(tag, "----- Wi-Fi SSID has set -----");
 
-    return ESP_OK;
+    return ERR_CODE_OK;
 }
 
 /**
@@ -77,20 +77,20 @@ esp_err_t wifi_ap_set_ssid(char *ssid, const uint8_t len)
  * @param password [in]: Wi-Fi AP password
  * @param len [in]: Password length
  */
-esp_err_t wifi_ap_set_password(char *password, const uint8_t len)
+types_error_code_e wifi_ap_set_password(char *password, const uint8_t len)
 {
     static bool has_password_set = false;
     
     if (has_password_set)
     {
         ESP_LOGE(tag, "----- Wi-Fi password already set -----");
-        return ESP_ERR_NOT_ALLOWED;
+        return ERR_CODE_NOT_ALLOWED;
     }
     
     if ((len >= WIFI_AP_PASSWORD_MAX_LEN) || (len < PASSWORD_MIN_LEN))
     {
         ESP_LOGE(tag, "----- Wi-Fi password out of valid range -----");
-        return ESP_ERR_INVALID_ARG;
+        return ERR_CODE_INVALID_PARAM;
     }
     
     strncpy(wifi_ap_password, password, len);
@@ -100,7 +100,7 @@ esp_err_t wifi_ap_set_password(char *password, const uint8_t len)
 
     ESP_LOGI(tag, "----- Wi-Fi password has set -----");
 
-    return ESP_OK;
+    return ERR_CODE_OK;
 }
 
 /**
