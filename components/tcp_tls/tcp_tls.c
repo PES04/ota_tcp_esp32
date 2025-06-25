@@ -250,25 +250,22 @@ static types_error_code_e run_conn_rx(esp_tls_t *tls, const uint8_t * rx_buffer,
     uint8_t tx_buffer[MSG_PARSER_BUF_LEN_BYTES] = {};
     uint8_t tx_len = 0;
 
-    if (err == ERR_CODE_IN_PROGRESS)
-    {
-        msg_parser_build_firmware_ack(tx_buffer, sizeof(tx_buffer), &tx_len);
-    }
-    else if (err == ERR_CODE_OK)
-    {
-        msg_parser_build_ota_ack(tx_buffer, sizeof(tx_buffer), true, firmware_bytes_read, &tx_len);
-    }
-    else
-    {
-        msg_parser_build_ota_ack(tx_buffer, sizeof(tx_buffer), false, firmware_bytes_read, &tx_len);
-    }
+    msg_parser_build_firmware_ack(tx_buffer, sizeof(tx_buffer), &tx_len);
 
     if (esp_tls_conn_write(tls, tx_buffer, tx_len) < 0)
     {
         return ERR_CODE_INVALID_OP;
     }
-    else
+
+    if ((err == ERR_CODE_OK) || (err == ERR_CODE_FAIL))
     {
-        return ERR_CODE_OK;
-    }   
+        msg_parser_build_ota_ack(tx_buffer, sizeof(tx_buffer), (err == ERR_CODE_OK), firmware_bytes_read, &tx_len);
+
+        if (esp_tls_conn_write(tls, tx_buffer, tx_len) < 0)
+        {
+            return ERR_CODE_INVALID_OP;
+        }
+    }
+
+    return ERR_CODE_OK;
 }
