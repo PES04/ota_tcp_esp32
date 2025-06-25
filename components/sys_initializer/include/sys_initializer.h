@@ -1,6 +1,8 @@
 #ifndef _SYS_INITIALIZER_H
 #define _SYS_INITIALIZER_H
 
-void sys_initializer_init(void);
+#include "types.h"
+
+types_error_code_e sys_initializer_init(void);
 
 #endif

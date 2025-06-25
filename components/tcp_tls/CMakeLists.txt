@@ -1,3 +1,4 @@
 idf_component_register(SRCS "tcp_tls.c"
                     INCLUDE_DIRS "include"
-                    PRIV_REQUIRES esp-tls)
+                    PRIV_REQUIRES esp-tls msg_parser 
+                    REQUIRES types)
