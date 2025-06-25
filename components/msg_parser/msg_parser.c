@@ -18,7 +18,7 @@ typedef enum {
 
 
 static void parse_header(uint8_t * p_data, uint32_t * p_firmware_size, uint8_t * p_hash);
-
+static types_error_code_e ota_compare_hashes(uint8_t *sent_hash, uint8_t *calc_hash);
 
 types_error_code_e msg_parser_run(uint8_t * p_data, const uint16_t len)
 {
@@ -52,17 +52,30 @@ types_error_code_e msg_parser_run(uint8_t * p_data, const uint16_t len)
             firmware_bytes_read += len;
 
             /* Call OTA Write */
-            types_error_code_e err = ota_process_write_block(p_data, firmware_bytes_read);
+            types_error_code_e err = ota_process_write_block(p_data, len);
 
-            if ((err == ERR_CODE_OK) || (err == ERR_CODE_FAIL))
-            {
+            if (err != ERR_CODE_OK) {
+                status = err;
+            }
+
+            if (firmware_bytes_read == firmware_size) { // Finished firmware transmission
+                
+                if (err == ERR_CODE_OK) {
+                    uint8_t calc_hash[HASH_SIZE_IN_BYTES] = {};
+
+                    /* Call OTA end */
+                    err = ota_process_end(calc_hash);
+                    if (err == ERR_CODE_OK) {
+                        err = ota_compare_hashes(hash, calc_hash);     
+                    }
+
+                }
+            
                 /* Clean parameters */
                 firmware_size = 0;
                 firmware_bytes_read = 0;
                 memset(hash, 0, sizeof(hash));
 
-                /* Call OTA end */
-                ota_process_end(hash);
                 state = READ_HEADER;
                 status = err;
             }
@@ -85,4 +98,14 @@ static void parse_header(uint8_t * p_data, uint32_t * p_firmware_size, uint8_t *
     }
 
     memcpy(p_hash, p_data + FIRMWARE_LEN_SIZE_IN_BYTES, HASH_SIZE_IN_BYTES);
+}
+
+static types_error_code_e ota_compare_hashes(uint8_t *sent_hash, uint8_t *calc_hash) {
+    for (int i = 0; i < HASH_SIZE_IN_BYTES; i++) {
+        if (sent_hash[i] != calc_hash[i]) {
+            return ERR_CODE_FAIL;
+        }
+    }
+
+    return ERR_CODE_OK;
 }
