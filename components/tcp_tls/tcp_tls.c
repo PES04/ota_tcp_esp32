@@ -27,6 +27,7 @@ static crypt_buffer_t server_key = {};
 
 /* ------------------- Private Functions ------------------- */
 static void tcp_tls_task(void * params);
+static types_error_code_e run_conn_rx(esp_tls_t *tls, const uint8_t * rx_buffer, const int32_t rx_len);
 /* --------------------------------------------------------- */
 
 /**
@@ -178,20 +179,24 @@ static void tcp_tls_task(void * params)
 
         while (1)
         {
-            int32_t len = esp_tls_conn_read(tls, rx_buffer, sizeof(rx_buffer) - 1);
-            if (len < 0)
+            int32_t rx_len = esp_tls_conn_read(tls, rx_buffer, sizeof(rx_buffer));
+            if (rx_len < 0)
             {
                 ESP_LOGE(tag, "----- Receving error -----");
                 break;
             }
-            else if (len == 0)
+            else if (rx_len == 0)
             {
                 ESP_LOGW(tag, "----- Client disconnected -----");
                 break;
             }
             else
             {
-                msg_parser_run(rx_buffer, len);
+                if (run_conn_rx(tls, rx_buffer, rx_len) != ERR_CODE_OK)
+                {
+                    ESP_LOGE(tag, "----- Sending error -----");
+                    break;
+                }
             }
         }
 
@@ -204,4 +209,35 @@ static void tcp_tls_task(void * params)
 
     close(listen_sock);
     vTaskDelete(NULL);
+}
+
+static types_error_code_e run_conn_rx(esp_tls_t *tls, const uint8_t * rx_buffer, const int32_t rx_len)
+{
+    uint32_t firmware_bytes_read = 0;
+    types_error_code_e err = msg_parser_run(rx_buffer, rx_len, &firmware_bytes_read);
+    
+    uint8_t tx_buffer[MSG_PARSER_BUF_LEN_BYTES] = {};
+    uint8_t tx_len = 0;
+
+    if (err == ERR_CODE_IN_PROGRESS)
+    {
+        msg_parser_build_firmware_ack(tx_buffer, sizeof(tx_buffer), &tx_len);
+    }
+    else if (err == ERR_CODE_OK)
+    {
+        msg_parser_build_ota_ack(tx_buffer, sizeof(tx_buffer), true, firmware_bytes_read, &tx_len);
+    }
+    else
+    {
+        msg_parser_build_ota_ack(tx_buffer, sizeof(tx_buffer), false, firmware_bytes_read, &tx_len);
+    }
+
+    if (esp_tls_conn_write(tls, tx_buffer, tx_len) < 0)
+    {
+        return ERR_CODE_INVALID_OP;
+    }
+    else
+    {
+        return ERR_CODE_OK;
+    }   
 }
