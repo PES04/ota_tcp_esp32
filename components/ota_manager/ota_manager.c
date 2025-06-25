@@ -11,15 +11,15 @@ static esp_ota_handle_t ota_handle = 0;
 static mbedtls_sha256_context sha_ctx;
 static bool ota_in_progress = false;
 
-esp_err_t ota_process_init(size_t img_size) {
+types_error_code_e ota_process_init(size_t img_size) {
 
     if (ota_in_progress) { // Update already in progress
-        return ESP_ERR_INVALID_STATE;
+        return ERR_CODE_IN_PROGRESS;
     }
 
     ota_partition = esp_ota_get_next_update_partition(NULL);
     if (!ota_partition) { // Invalid OTA partition
-        return ESP_FAIL; 
+        return ERR_CODE_FAIL; 
     }
 
     ESP_LOGI(TAG, "Iniciando OTA para partição: %s", ota_partition->label);
@@ -32,24 +32,24 @@ esp_err_t ota_process_init(size_t img_size) {
     mbedtls_sha256_starts(&sha_ctx, 0); // 0 for SHA-256
 
     ota_in_progress = true;
-    return ESP_OK;
+    return ERR_CODE_OK;
 }
 
-esp_err_t ota_process_write_block(const uint8_t *data, size_t data_len) {
+types_error_code_e ota_process_write_block(const uint8_t *data, size_t data_len) {
     if (!ota_in_progress) {
-        return ESP_ERR_INVALID_STATE;
+        return ERR_CODE_IN_PROGRESS;
     }
 
     ESP_ERROR_CHECK(esp_ota_write(ota_handle, data, data_len));
     // Updates SHA256 computation with buffer data
     mbedtls_sha256_update(&sha_ctx, data, data_len);
 
-    return ESP_OK;
+    return ERR_CODE_OK;
 }
 
-esp_err_t ota_process_end(uint8_t *out_sha256) {
+types_error_code_e ota_process_end(uint8_t *out_sha256) {
     if (!ota_in_progress) {
-        return ESP_ERR_INVALID_STATE;
+        return ERR_CODE_IN_PROGRESS;
     }
 
     // Finish OTA update
@@ -64,10 +64,15 @@ esp_err_t ota_process_end(uint8_t *out_sha256) {
 
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Erro ao finalizar OTA: %s", esp_err_to_name(err));
-        return err;
+        return ERR_CODE_FAIL;
     }
 
-    return esp_ota_set_boot_partition(ota_partition);
+    if (esp_ota_set_boot_partition(ota_partition) != ESP_OK) {
+        ESP_LOGE(TAG, "Erro ao configurar nova partição OTA");
+        return ERR_CODE_FAIL;
+    }
+
+    return ERR_CODE_OK;
 }
 
 void ota_check_rollback() {

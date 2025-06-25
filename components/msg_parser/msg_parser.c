@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "msg_parser.h"
+#include "ota_manager.h"
 
 
 #define FIRMWARE_LEN_SIZE_IN_BYTES          (4U)
@@ -41,7 +42,8 @@ types_error_code_e msg_parser_run(uint8_t * p_data, const uint16_t len)
         break;
 
         case START_OTA:
-            /* Start OTA here */
+            /* Start OTA */
+            ota_process_init(firmware_size);
             state = WRITE_FIRMWARE;
             /* Fallthrough */
 
@@ -49,7 +51,8 @@ types_error_code_e msg_parser_run(uint8_t * p_data, const uint16_t len)
         {
             firmware_bytes_read += len;
 
-            types_error_code_e err = ERR_CODE_OK; /* Call OTA write here */
+            /* Call OTA Write */
+            types_error_code_e err = ota_process_write_block(p_data, firmware_bytes_read);
 
             if ((err == ERR_CODE_OK) || (err == ERR_CODE_FAIL))
             {
@@ -58,8 +61,8 @@ types_error_code_e msg_parser_run(uint8_t * p_data, const uint16_t len)
                 firmware_bytes_read = 0;
                 memset(hash, 0, sizeof(hash));
 
-                /* Call OTA end here */
-
+                /* Call OTA end */
+                ota_process_end(hash);
                 state = READ_HEADER;
                 status = err;
             }
