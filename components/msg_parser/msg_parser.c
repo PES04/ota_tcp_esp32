@@ -56,7 +56,7 @@ types_error_code_e msg_parser_run(const uint8_t * p_data, const uint16_t len, ui
 
     types_error_code_e status = ERR_CODE_IN_PROGRESS;
     
-    *p_out_bytes_read = -1;
+    *p_out_bytes_read = UINT32_MAX;
 
     switch (state_machine_instance.state)
     {

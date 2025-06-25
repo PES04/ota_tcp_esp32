@@ -13,6 +13,13 @@
 #define COUNT_NEEDED_TO_START_TCP_SOCKET        (2U)
 #define TCP_BUFFER_LEN_BYTES                    (2048U)
 
+#define KEEPIDLE_TIME_SEC                       (30)
+#define KEEPINTERVAL_SEC                        (5)
+#define KEEPCOUNT                               (2)
+
+#define RX_TIMEOUT_SEC                          (10)
+#define RX_TIMEOUT_USEC                         (0)
+
 
 typedef struct {
     uint8_t val[TCP_TLS_MAX_BUFFER_LEN];
@@ -34,10 +41,14 @@ static types_error_code_e run_conn_rx(esp_tls_t *tls, const uint8_t * rx_buffer,
  * @brief Initialize the tcp_tls component
  * 
  */
-void tcp_tls_init(void)
+types_error_code_e tcp_tls_init(void)
 {
     ESP_LOGI(tag, "----- Initializing tcp_tls task -----");
     xTaskCreate(tcp_tls_task, "tcp_tls_task", 8192, NULL, 4, NULL);
+
+    types_error_code_e err = msg_parser_init();
+
+    return err;
 }
 
 /**
@@ -129,6 +140,16 @@ static void tcp_tls_task(void * params)
         .serverkey_bytes = server_key.len
     };
 
+    int keepAlive = 1;
+    int keepIdle = KEEPIDLE_TIME_SEC;
+    int keepInterval = KEEPINTERVAL_SEC;
+    int keepCount = KEEPCOUNT;
+
+    struct timeval rx_timeout = {
+        .tv_sec = RX_TIMEOUT_SEC,
+        .tv_usec = RX_TIMEOUT_USEC
+    };
+
     ESP_LOGI(tag, "----- Binding socket -----");
     int ret = bind(listen_sock, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
     if (ret != 0)
@@ -159,6 +180,14 @@ static void tcp_tls_task(void * params)
             ESP_LOGE(tag, "----- Unable to accept the connection -----");
             continue;
         }
+
+        /* Keep alive settings */
+        setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &keepAlive, sizeof(int));
+        setsockopt(sock, IPPROTO_TCP, TCP_KEEPIDLE, &keepIdle, sizeof(int));
+        setsockopt(sock, IPPROTO_TCP, TCP_KEEPINTVL, &keepInterval, sizeof(int));
+        setsockopt(sock, IPPROTO_TCP, TCP_KEEPCNT, &keepCount, sizeof(int));
+        /* Receive timeout settings */
+        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &rx_timeout, sizeof(rx_timeout));
 
         esp_tls_t *tls = esp_tls_init();
         if (tls == NULL)
@@ -200,6 +229,8 @@ static void tcp_tls_task(void * params)
             }
         }
 
+        msg_parser_clean();
+        
         ESP_LOGI(tag, "----- Closing socket -----");
 
         esp_tls_conn_destroy(tls);

@@ -5,7 +5,7 @@
 
 #include "types.h"
 
-void tcp_tls_init(void);
+types_error_code_e tcp_tls_init(void);
 
 types_error_code_e tcp_tls_set_server_crt(const uint8_t *crt, const size_t len);
 

@@ -24,7 +24,7 @@ void app_main(void)
     
     if (sys_initializer_init() != ERR_CODE_OK)
     {
-        init_err();
+        
     }
     else
     {
@@ -34,8 +34,14 @@ void app_main(void)
     wifi_ap_init();
     ESP_LOGI(tag, "----- wifi_ap: OK -----");
 
-    tcp_tls_init();
-    ESP_LOGI(tag, "----- tcp_tls: OK -----");
+    if (tcp_tls_init() != ERR_CODE_OK)
+    {
+        init_err();
+    }
+    else
+    {
+        ESP_LOGI(tag, "----- tcp_tls: OK -----");
+    }
 }
 
 static void init_err(void)
