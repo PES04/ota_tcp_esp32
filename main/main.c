@@ -22,7 +22,7 @@ void app_main(void)
 {
     ESP_LOGI(tag, "----- Starting application -----");
     
-    if (sys_initializer_init() != ESP_OK)
+    if (sys_initializer_init() != ERR_CODE_OK)
     {
         init_err();
     }

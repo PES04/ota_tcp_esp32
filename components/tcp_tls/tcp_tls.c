@@ -45,20 +45,20 @@ void tcp_tls_init(void)
  * @param crt [in]: Server certificate
  * @param len [in]: Server certificate length in bytes
  */
-esp_err_t tcp_tls_set_server_crt(const uint8_t *crt, const size_t len)
+types_error_code_e tcp_tls_set_server_crt(const uint8_t *crt, const size_t len)
 {
     static bool has_server_crt_set = false;
     
     if (has_server_crt_set == true)
     {
         ESP_LOGE(tag, "----- Server certificate already set -----");
-        return ESP_ERR_NOT_ALLOWED;
+        return ERR_CODE_NOT_ALLOWED;
     }
 
     if (len >= TCP_TLS_MAX_BUFFER_LEN)
     {
         ESP_LOGE(tag, "----- Server certificate invalid range -----");
-        return ESP_ERR_INVALID_ARG;
+        return ERR_CODE_INVALID_PARAM;
     }
 
     memcpy(server_crt.val, crt, len);
@@ -69,7 +69,7 @@ esp_err_t tcp_tls_set_server_crt(const uint8_t *crt, const size_t len)
 
     ESP_LOGI(tag, "----- Server certificate has set -----");
 
-    return ESP_OK;
+    return ERR_CODE_OK;
 }
 
 /**
@@ -78,20 +78,20 @@ esp_err_t tcp_tls_set_server_crt(const uint8_t *crt, const size_t len)
  * @param key [in]: Server key
  * @param len [in]: Server key length in bytes
  */
-esp_err_t tcp_tls_set_server_key(const uint8_t *key, const size_t len)
+types_error_code_e tcp_tls_set_server_key(const uint8_t *key, const size_t len)
 {
     static bool has_server_key_set = false;
     
     if (has_server_key_set == true)
     {
         ESP_LOGE(tag, "----- Server key already set -----");
-        return ESP_ERR_NOT_ALLOWED;
+        return ERR_CODE_NOT_ALLOWED;
     }
     
     if (len >= TCP_TLS_MAX_BUFFER_LEN)
     {
         ESP_LOGE(tag, "----- Server key invalid range -----");
-        return ESP_ERR_INVALID_ARG;
+        return ERR_CODE_INVALID_PARAM;
     }
 
     memcpy(server_key.val, key, len);
@@ -102,7 +102,7 @@ esp_err_t tcp_tls_set_server_key(const uint8_t *key, const size_t len)
 
     ESP_LOGI(tag, "----- Server key has set -----");
 
-    return ESP_OK;
+    return ERR_CODE_OK;
 }
 
 /**
