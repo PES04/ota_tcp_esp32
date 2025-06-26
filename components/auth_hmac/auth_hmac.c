@@ -8,27 +8,27 @@
 static const char *tag = "AUTH_HMAC";
 
 /**
- * @brief Generate a random nounce for HMAC authentication
+ * @brief Generate a random nonce for HMAC authentication
  * 
- * @param nounce [out]: Pointer to the buffer where the nounce will be stored
- * @param len [in]: Length of the nounce in bytes
+ * @param nonce [out]: Pointer to the buffer where the nonce will be stored
+ * @param len [in]: Length of the nonce in bytes
  */
-void auth_hmac_generate_nounce(uint8_t *nounce, size_t len)
+void auth_hmac_generate_nonce(uint8_t *nonce, size_t len)
 {
-  esp_fill_random(nounce, len); // Fill nounce param with random bytes
-  ESP_LOGI(tag, "----- Nounce generated -----");
+  esp_fill_random(nonce, len); // Fill nonce param with random bytes
+  ESP_LOGI(tag, "----- Nonce generated -----");
 }
 
 /**
- * @brief Verify the HMAC response using the nounce and shared key
+ * @brief Verify the HMAC response using the nonce and shared key
  * 
- * @param nounce [in]: Pointer to the nounce used for HMAC generation
- * @param nounce_len [in]: Length of the nounce in bytes
+ * @param nonce [in]: Pointer to the nonce used for HMAC generation
+ * @param nonce_len [in]: Length of the nonce in bytes
  * @param received_hmac [in]: Pointer to the received HMAC response
  * @param received_len [in]: Length of the received HMAC response in bytes
  * @return true if the HMAC is valid, false otherwise
  */
-bool auth_hmac_verify_response(const uint8_t *nounce, size_t nounce_len, const uint8_t *received_hmac, size_t received_len)
+bool auth_hmac_verify_response(const uint8_t *nonce, size_t nonce_len, const uint8_t *received_hmac, size_t received_len)
 {
   ESP_LOGI(tag, "----- Starting HMAC verification -----");
 
@@ -57,7 +57,7 @@ bool auth_hmac_verify_response(const uint8_t *nounce, size_t nounce_len, const u
   }
 
   if (mbedtls_md_hmac_starts(&ctx, (const unsigned char *)HMAC_SHARED_KEY, strlen(HMAC_SHARED_KEY)) != 0 || // Initialize HMAC with shared key
-      mbedtls_md_hmac_update(&ctx, nounce, nounce_len) != 0 || // Update with nounce
+      mbedtls_md_hmac_update(&ctx, nonce, nonce_len) != 0 || // Update with nonce
       mbedtls_md_hmac_finish(&ctx, calculated_hmac) != 0) // Compute HMAC
   {
     ESP_LOGE(tag, "----- Error during HMAC computation -----");
