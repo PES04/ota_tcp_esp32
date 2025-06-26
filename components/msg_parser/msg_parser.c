@@ -155,7 +155,7 @@ types_error_code_e msg_parser_build_ota_ack(uint8_t * p_buffer,
     uint16_t err_code = (status == true) ? 100U : 200U;
     for (uint8_t i = 0; i < OTA_ACK_ERR_SIZE_IN_BYTE; i++)
     {
-        msg[i + OTA_ACK_LEN_SIZE_IN_BYTES - 1U] = (err_code >> (i * 8U)) & 0xFF;
+        msg[i + OTA_ACK_LEN_SIZE_IN_BYTES] = (err_code >> (i * 8U)) & 0xFF;
     }
 
     memcpy(p_buffer, msg, sizeof(msg));
