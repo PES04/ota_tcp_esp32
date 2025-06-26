@@ -15,6 +15,9 @@
 #define OTA_ACK_LEN_SIZE_IN_BYTES           (4U)
 #define OTA_ACK_ERR_SIZE_IN_BYTE            (2U)
 
+/* ---------- FIRMWARE ACK PARAMETERS ---------- */
+#define FIRMWARE_ACK_SIZE_IN_BYTES          (4U)
+
 
 typedef enum {  
     READ_HEADER,
@@ -122,7 +125,7 @@ void msg_parser_clean(void)
 
 types_error_code_e msg_parser_build_firmware_ack(uint8_t * p_buffer, const uint8_t len, uint8_t * p_out_len)
 {
-    if (len != MSG_PARSER_BUF_LEN_BYTES)
+    if (len < FIRMWARE_ACK_SIZE_IN_BYTES)
     {
         return ERR_CODE_INVALID_PARAM;
     }
@@ -141,7 +144,7 @@ types_error_code_e msg_parser_build_ota_ack(uint8_t * p_buffer,
                                             const uint32_t bytes_read, 
                                             uint8_t * p_out_len)
 {
-    if (len != MSG_PARSER_BUF_LEN_BYTES)
+    if (len < OTA_ACK_SIZE_IN_BYTES)
     {
         return ERR_CODE_INVALID_PARAM;
     }
