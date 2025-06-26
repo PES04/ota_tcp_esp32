@@ -1,11 +1,48 @@
-#include "auth_hmac.h"
-
+#include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
+
 #include "esp_log.h"
 #include "esp_random.h"
 #include "mbedtls/md.h"
+#include "auth_hmac.h"
 
 static const char *tag = "AUTH_HMAC";
+
+static struct {
+    uint8_t val[AUTH_HMAC_MAX_BUFFER_LEN];
+    size_t len;
+    bool is_set;
+} psk = { .is_set = false };
+
+/**
+ * @brief pre-shared key setter
+ * 
+ * @param key [in]: pre-shared key
+ * @param len [in]: pre-shared key length in bytes
+ */
+types_error_code_e auth_hmac_set_hmac_psk(const uint8_t *key, const size_t len)
+{  
+  if (psk.is_set == true)
+  {
+    ESP_LOGE(tag, "----- Shared key already set -----");
+    return ERR_CODE_NOT_ALLOWED;
+  }
+  
+  if (len == 0 || len > AUTH_HMAC_MAX_BUFFER_LEN)
+  {
+    ESP_LOGE(tag, "----- Shared key invalid range -----");
+    return ERR_CODE_INVALID_PARAM;
+  }
+
+  memcpy(psk.val, key, len);
+  psk.len = len;
+  psk.is_set = true;
+  ESP_LOGI(tag, "----- Shared key has set -----");
+
+  return ERR_CODE_OK;
+}
+
 
 /**
  * @brief Generate a random nonce for HMAC authentication
@@ -56,7 +93,7 @@ bool auth_hmac_verify_response(const uint8_t *nonce, size_t nonce_len, const uin
     return false;
   }
 
-  if (mbedtls_md_hmac_starts(&ctx, (const unsigned char *)HMAC_SHARED_KEY, strlen(HMAC_SHARED_KEY)) != 0 || // Initialize HMAC with shared key
+  if (mbedtls_md_hmac_starts(&ctx, psk.val, psk.len) != 0 ||
       mbedtls_md_hmac_update(&ctx, nonce, nonce_len) != 0 || // Update with nonce
       mbedtls_md_hmac_finish(&ctx, calculated_hmac) != 0) // Compute HMAC
   {
