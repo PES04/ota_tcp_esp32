@@ -7,6 +7,10 @@
 #include "mbedtls/md.h"
 #include "auth_hmac.h"
 
+
+#define HMAC_SHA256_LEN     (32U) // SHA-256 produces a 32-byte hash
+
+
 static const char *tag = "AUTH_HMAC";
 
 static struct {
