@@ -70,16 +70,19 @@ types_error_code_e msg_parser_run(const uint8_t * p_data, const uint16_t len, ui
         break;
 
         case START_OTA:
-            /* Start OTA */
-            ota_process_init(state_machine_instance.firmware_size);
-            state_machine_instance.state = WRITE_FIRMWARE;
-            /* Fallthrough */
+            types_error_code_e err = ota_process_init(state_machine_instance.firmware_size, state_machine_instance.hash);
+            
+            if (err == ERR_CODE_OK) {
+                state_machine_instance.state = WRITE_FIRMWARE;
+
+            } else {
+                status = err;
+            }
 
         case WRITE_FIRMWARE:
         {
             state_machine_instance.firmware_bytes_read += len;
 
-            /* Call OTA Write */
             types_error_code_e err = ota_process_write_block(p_data, len);
 
             if ((err == ERR_CODE_OK) || (err == ERR_CODE_FAIL))
@@ -92,8 +95,7 @@ types_error_code_e msg_parser_run(const uint8_t * p_data, const uint16_t len, ui
                 state_machine_instance.firmware_bytes_read = 0;
                 memset(state_machine_instance.hash, 0, sizeof(state_machine_instance.hash));
 
-                /* Call OTA end here */
-
+                err = ota_process_end();
                 state_machine_instance.state = READ_HEADER;
                 status = err;
             }
@@ -174,14 +176,4 @@ static void parse_header(const uint8_t * p_data, uint32_t * p_firmware_size, uin
     }
 
     memcpy(p_hash, p_data + FIRMWARE_LEN_SIZE_IN_BYTES, HASH_SIZE_IN_BYTES);
-}
-
-static types_error_code_e ota_compare_hashes(uint8_t *sent_hash, uint8_t *calc_hash) {
-    for (int i = 0; i < HASH_SIZE_IN_BYTES; i++) {
-        if (sent_hash[i] != calc_hash[i]) {
-            return ERR_CODE_FAIL;
-        }
-    }
-
-    return ERR_CODE_OK;
 }

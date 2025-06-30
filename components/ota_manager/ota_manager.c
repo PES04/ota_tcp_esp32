@@ -1,8 +1,11 @@
+#include <string.h>
 #include "ota_manager.h"
 #include "esp_ota_ops.h"
 #include "esp_partition.h"
 #include "esp_log.h"
 #include "mbedtls/sha256.h"
+
+#define HASH_SIZE_IN_BYTES                  (32U)
 
 static const char *TAG = "OTA";
 
@@ -10,12 +13,23 @@ static const esp_partition_t *ota_partition = NULL;
 static esp_ota_handle_t ota_handle = 0;
 static mbedtls_sha256_context sha_ctx;
 static bool ota_in_progress = false;
+static uint8_t fmw_size = 0;
+static uint8_t updated_fmw_size = 0;
+static uint8_t sent_hash[HASH_SIZE_IN_BYTES] = {};
 
-types_error_code_e ota_process_init(size_t img_size) {
+static int ota_process_compute_hash(uint8_t *out_sha256);
+static types_error_code_e ota_compare_hashes(const uint8_t *sent_hash, const uint8_t *calc_hash);
+
+
+types_error_code_e ota_process_init(const size_t img_size, const uint8_t* hash) {
 
     if (ota_in_progress) { // Update already in progress
-        return ERR_CODE_IN_PROGRESS;
+        return ERR_CODE_NOT_ALLOWED;
     }
+
+    fmw_size = img_size;
+    memcpy(sent_hash, hash, HASH_SIZE_IN_BYTES);
+
 
     ota_partition = esp_ota_get_next_update_partition(NULL);
     if (!ota_partition) { // Invalid OTA partition
@@ -25,7 +39,7 @@ types_error_code_e ota_process_init(size_t img_size) {
     ESP_LOGI(TAG, "Iniciando OTA para partição: %s", ota_partition->label);
 
     // Allocates memory for the OTA partition
-    ESP_ERROR_CHECK(esp_ota_begin(ota_partition, img_size, &ota_handle));
+    ESP_ERROR_CHECK(esp_ota_begin(ota_partition, fmw_size, &ota_handle));
 
     // Initialize the context and starts the message digest computation
     mbedtls_sha256_init(&sha_ctx);
@@ -35,37 +49,56 @@ types_error_code_e ota_process_init(size_t img_size) {
     return ERR_CODE_OK;
 }
 
-types_error_code_e ota_process_write_block(const uint8_t *data, size_t data_len) {
-    if (!ota_in_progress) {
-        return ERR_CODE_IN_PROGRESS;
+types_error_code_e ota_process_write_block(const uint8_t *data, const size_t data_len) {
+
+    if (!ota_in_progress) { 
+        return ERR_CODE_NOT_ALLOWED;
     }
 
     ESP_ERROR_CHECK(esp_ota_write(ota_handle, data, data_len));
+
     // Updates SHA256 computation with buffer data
     mbedtls_sha256_update(&sha_ctx, data, data_len);
 
-    return ERR_CODE_OK;
+    updated_fmw_size += data_len;
+
+    if (updated_fmw_size < fmw_size) {
+        return ERR_CODE_IN_PROGRESS;
+
+    } else if (updated_fmw_size > fmw_size) {
+        return ERR_CODE_FAIL;
+
+    } else {
+        uint8_t calc_hash[HASH_SIZE_IN_BYTES] = {};
+
+        if (!ota_process_compute_hash(calc_hash)) {
+            return (ota_compare_hashes(sent_hash, calc_hash));     
+        }
+
+        return ERR_CODE_FAIL;
+    }
 }
 
-types_error_code_e ota_process_end(uint8_t *out_sha256) {
-    if (!ota_in_progress) {
-        return ERR_CODE_IN_PROGRESS;
+int ota_process_compute_hash(uint8_t *out_sha256) {
+    
+    // Finishes SHA256 computation
+    return mbedtls_sha256_finish(&sha_ctx, out_sha256);
+
+}
+
+types_error_code_e ota_process_end() {
+
+    if (!ota_in_progress) { 
+        return ERR_CODE_NOT_ALLOWED;
     }
 
     // Finish OTA update
-    esp_err_t err = esp_ota_end(ota_handle);
+    ESP_ERROR_CHECK(esp_ota_end(ota_handle));
     
-    // Finishes SHA256 computation
-    mbedtls_sha256_finish(&sha_ctx, out_sha256);
     // Free memory allocated for the context
     mbedtls_sha256_free(&sha_ctx);
     
     ota_in_progress = false;
-
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Erro ao finalizar OTA: %s", esp_err_to_name(err));
-        return ERR_CODE_FAIL;
-    }
 
     if (esp_ota_set_boot_partition(ota_partition) != ESP_OK) {
         ESP_LOGE(TAG, "Erro ao configurar nova partição OTA");
@@ -88,6 +121,7 @@ void ota_check_rollback() {
 
             if (esp_ota_mark_app_valid_cancel_rollback() == ESP_OK) { // Cancels rollback
                 ESP_LOGI(TAG, "Firmware marcado como válido. Rollback cancelado com sucesso.");
+                
             } else { // Rolls back to the previously workable app and restarts ESP
                 ESP_LOGE(TAG, "Falha ao marcar firmware como válido.");
                 esp_ota_mark_app_invalid_rollback_and_reboot();
@@ -102,4 +136,15 @@ void ota_check_rollback() {
     }
 
 #endif 
+}
+
+static types_error_code_e ota_compare_hashes(const uint8_t *sent_hash, const uint8_t *calc_hash) {
+    for (int i = 0; i < fmw_size; i++) {
+        if (sent_hash[i] != calc_hash[i]) {
+            ESP_LOGE(TAG, "Hashes diferentes");
+            return ERR_CODE_FAIL;
+        }
+    }
+
+    return ERR_CODE_OK;
 }
