@@ -7,6 +7,7 @@
 #include "lwip/sockets.h"
 #include "esp_tls.h"
 #include "msg_parser.h"
+#include "auth_hmac.h"
 #include "tcp_tls.h"
 #include "ota_manager.h"
 
@@ -35,6 +36,7 @@ static crypt_buffer_t server_key = {};
 /* ------------------- Private Functions ------------------- */
 static void tcp_tls_task(void * params);
 static types_error_code_e run_conn_rx(esp_tls_t *tls, const uint8_t * rx_buffer, const int32_t rx_len);
+static types_error_code_e hmac_validation(esp_tls_t * tls, uint8_t * p_rx_buffer, const uint32_t len_rx_buffer);
 /* --------------------------------------------------------- */
 
 /**
@@ -205,8 +207,12 @@ static void tcp_tls_task(void * params)
         }
 
         uint8_t rx_buffer[TCP_BUFFER_LEN_BYTES] = {};
+        
+        /* HMAC validation */
+        bool client_auth = (hmac_validation(tls, rx_buffer, sizeof(rx_buffer)) == ERR_CODE_OK) ? true : false;
 
-        while (1)
+        /* Only runs if client is authenticated */
+        while (client_auth)
         {
             int32_t rx_len = esp_tls_conn_read(tls, rx_buffer, sizeof(rx_buffer));
             if (rx_len < 0)
@@ -229,6 +235,7 @@ static void tcp_tls_task(void * params)
             }
         }
 
+        /* Closing connection routine */
         msg_parser_clean();
         
         ESP_LOGI(tag, "----- Closing socket -----");
@@ -268,4 +275,48 @@ static types_error_code_e run_conn_rx(esp_tls_t *tls, const uint8_t * rx_buffer,
     }
 
     return ERR_CODE_OK;
+}
+
+static types_error_code_e hmac_validation(esp_tls_t * tls, uint8_t * p_rx_buffer, const uint32_t len_rx_buffer)
+{
+    uint8_t tx_buffer[AUTH_HMAC_NONCE_LEN] = {};
+    
+    auth_hmac_generate_nonce(tx_buffer, sizeof(tx_buffer));
+
+    if (esp_tls_conn_write(tls, tx_buffer, sizeof(tx_buffer)) < 0)
+    {
+        return ERR_CODE_INVALID_OP;
+    }
+
+    int32_t rx_len = esp_tls_conn_read(tls, p_rx_buffer, len_rx_buffer);
+    types_error_code_e err = ERR_CODE_OK;
+    if (rx_len < 0)
+    {
+        err = ERR_CODE_FAIL;
+    }
+    else if (rx_len == 0)
+    {
+        err = ERR_CODE_FAIL;
+    }
+    else
+    {
+        if (auth_hmac_verify_response(tx_buffer, sizeof(tx_buffer), p_rx_buffer, rx_len))
+        {
+            uint8_t tx_len = 0;
+            msg_parser_build_firmware_ack(tx_buffer, sizeof(tx_buffer), &tx_len);
+
+            if (esp_tls_conn_write(tls, tx_buffer, tx_len) < 0)
+            {
+                return ERR_CODE_INVALID_OP;
+            }
+
+            err = ERR_CODE_OK;
+        }
+        else
+        {
+            err = ERR_CODE_FAIL;
+        }
+    }
+
+    return err;
 }

@@ -5,6 +5,7 @@
 #include "nvs_flash.h"
 #include "tcp_tls.h"
 #include "wifi_ap.h"
+#include "auth_hmac.h"
 #include "sys_initializer.h"
 
 
@@ -13,6 +14,7 @@ static const char *tag = "SYS_INITIALIZER";
 
 static types_error_code_e init_wifi_params(void);
 static types_error_code_e init_tcp_tls_params(void);
+static types_error_code_e init_auth_hmac_params(void);
 
 /**
  * @brief Initialize the sys_initializer component
@@ -38,6 +40,12 @@ types_error_code_e sys_initializer_init(void)
     }
 
     err = init_tcp_tls_params();
+    if (err != ERR_CODE_OK)
+    {
+        return err;
+    }
+
+    err = init_auth_hmac_params();
 
     return err;
 }
@@ -125,4 +133,25 @@ static types_error_code_e init_tcp_tls_params(void)
     nvs_close(nvs_handle);
 
     return err;
+}
+
+/**
+ * @brief Initialize the HMAC authentication parameters (pre-shared Key)
+ * 
+ */
+static types_error_code_e init_auth_hmac_params(void)
+{
+  uint8_t buffer[AUTH_HMAC_MAX_BUFFER_LEN] = {};
+    
+  nvs_handle_t nvs_handle = 0;
+  ESP_ERROR_CHECK(nvs_open("hmac_config", NVS_READONLY, &nvs_handle));
+
+  /* HMAC PSK initialization */
+  size_t buffer_len = sizeof(buffer);
+  ESP_ERROR_CHECK(nvs_get_blob(nvs_handle, "hmac_psk", buffer, &buffer_len));
+
+  types_error_code_e err = auth_hmac_set_hmac_psk(buffer, buffer_len);
+  nvs_close(nvs_handle);
+
+  return err;
 }

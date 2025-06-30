@@ -4,3 +4,5 @@ wifi_params,file,binary,nvs_config/wifi_params.txt
 tls_config,namespace,,
 server_crt,file,binary,nvs_config/server.crt
 server_key,file,binary,nvs_config/server.key
+hmac_config,namespace,,
+hmac_psk,file,binary,nvs_config/hmac_psk.key
