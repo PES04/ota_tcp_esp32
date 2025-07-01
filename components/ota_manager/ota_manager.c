@@ -13,9 +13,9 @@ static const esp_partition_t *ota_partition = NULL;
 static esp_ota_handle_t ota_handle = 0;
 static mbedtls_sha256_context sha_ctx;
 static bool ota_in_progress = false;
-static uint8_t fmw_size = 0;
-static uint8_t updated_fmw_size = 0;
-static uint8_t sent_hash[HASH_SIZE_IN_BYTES] = {};
+static size_t fmw_size = 0;
+static size_t updated_fmw_size = 0;
+static uint8_t sent_hash[HASH_SIZE_IN_BYTES] = {0};
 
 static int ota_process_compute_hash(uint8_t *out_sha256);
 static types_error_code_e ota_compare_hashes(const uint8_t *sent_hash, const uint8_t *calc_hash);
@@ -55,12 +55,18 @@ types_error_code_e ota_process_write_block(const uint8_t *data, const size_t dat
         return ERR_CODE_NOT_ALLOWED;
     }
 
-    ESP_ERROR_CHECK(esp_ota_write(ota_handle, data, data_len));
+    esp_err_t err = esp_ota_write(ota_handle, data, data_len);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Erro na escrita OTA: %s", esp_err_to_name(err));
+        return ERR_CODE_FAIL;
+    }
 
     // Updates SHA256 computation with buffer data
     mbedtls_sha256_update(&sha_ctx, data, data_len);
 
     updated_fmw_size += data_len;
+
+    ESP_LOGI(TAG, "Updated firmware size: %zu / %zu", updated_fmw_size, fmw_size);
 
     if (updated_fmw_size < fmw_size) {
         return ERR_CODE_IN_PROGRESS;
@@ -71,11 +77,18 @@ types_error_code_e ota_process_write_block(const uint8_t *data, const size_t dat
     } else {
         uint8_t calc_hash[HASH_SIZE_IN_BYTES] = {};
 
-        if (!ota_process_compute_hash(calc_hash)) {
-            return (ota_compare_hashes(sent_hash, calc_hash));     
+        if (ota_process_compute_hash(calc_hash) != 0) {
+            ESP_LOGE(TAG, "Falha ao computar hash SHA-256");
+            return ERR_CODE_FAIL;
         }
 
-        return ERR_CODE_FAIL;
+        ESP_LOGI(TAG, "Hash recebido:");
+        ESP_LOG_BUFFER_HEX(TAG, sent_hash, HASH_SIZE_IN_BYTES);
+        ESP_LOGI(TAG, "Hash calculado:");
+        ESP_LOG_BUFFER_HEX(TAG, calc_hash, HASH_SIZE_IN_BYTES);
+
+        
+        return (ota_compare_hashes(sent_hash, calc_hash));     
     }
 }
 
@@ -99,10 +112,24 @@ types_error_code_e ota_process_end() {
     mbedtls_sha256_free(&sha_ctx);
     
     ota_in_progress = false;
+    updated_fmw_size = 0;
 
     if (esp_ota_set_boot_partition(ota_partition) != ESP_OK) {
         ESP_LOGE(TAG, "Erro ao configurar nova partição OTA");
         return ERR_CODE_FAIL;
+    }
+
+    return ERR_CODE_OK;
+}
+
+static types_error_code_e ota_compare_hashes(const uint8_t *sent_hash, const uint8_t *calc_hash) {
+    ESP_LOGI(TAG, "OTA process compare hashes");
+
+    for (int i = 0; i < HASH_SIZE_IN_BYTES; i++) {
+        if (sent_hash[i] != calc_hash[i]) {
+            ESP_LOGE(TAG, "Hashes diferentes");
+            return ERR_CODE_FAIL;
+        }
     }
 
     return ERR_CODE_OK;
@@ -136,15 +163,4 @@ void ota_check_rollback() {
     }
 
 #endif 
-}
-
-static types_error_code_e ota_compare_hashes(const uint8_t *sent_hash, const uint8_t *calc_hash) {
-    for (int i = 0; i < fmw_size; i++) {
-        if (sent_hash[i] != calc_hash[i]) {
-            ESP_LOGE(TAG, "Hashes diferentes");
-            return ERR_CODE_FAIL;
-        }
-    }
-
-    return ERR_CODE_OK;
 }
