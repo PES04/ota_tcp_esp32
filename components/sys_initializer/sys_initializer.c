@@ -36,7 +36,7 @@ types_error_code_e sys_initializer_init(void)
     types_error_code_e err = init_wifi_params();
     if (err != ERR_CODE_OK)
     {
-        return ret;
+        return err;
     }
 
     err = init_tcp_tls_params();
