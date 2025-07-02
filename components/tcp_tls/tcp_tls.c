@@ -11,6 +11,8 @@
 #include "tcp_tls.h"
 #include "ota_manager.h"
 
+#define PINNED_CORE                             (1)
+
 #define COUNT_NEEDED_TO_START_TCP_SOCKET        (2U)
 #define TCP_BUFFER_LEN_BYTES                    (2048U)
 
@@ -46,7 +48,7 @@ static types_error_code_e hmac_validation(esp_tls_t * tls, uint8_t * p_rx_buffer
 types_error_code_e tcp_tls_init(void)
 {
     ESP_LOGI(tag, "----- Initializing tcp_tls task -----");
-    xTaskCreate(tcp_tls_task, "tcp_tls_task", 8192, NULL, 4, NULL);
+    xTaskCreatePinnedToCore(tcp_tls_task, "tcp_tls_task", 8192, NULL, 4, NULL, PINNED_CORE);
 
     types_error_code_e err = msg_parser_init();
 
@@ -271,6 +273,10 @@ static types_error_code_e run_conn_rx(esp_tls_t *tls, const uint8_t * rx_buffer,
         if (esp_tls_conn_write(tls, tx_buffer, tx_len) < 0)
         {
             return ERR_CODE_INVALID_OP;
+        }
+
+        if (err == ERR_CODE_OK) {
+            esp_restart();
         }
     }
 
