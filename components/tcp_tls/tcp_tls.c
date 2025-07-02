@@ -275,7 +275,7 @@ static types_error_code_e run_conn_rx(esp_tls_t *tls, const uint8_t * rx_buffer,
             return ERR_CODE_INVALID_OP;
         }
 
-        if (err = ERR_CODE_OK) {
+        if (err == ERR_CODE_OK) {
             esp_restart();
         }
     }
