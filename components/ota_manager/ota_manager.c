@@ -33,6 +33,7 @@ types_error_code_e ota_process_init(const size_t img_size, const uint8_t* hash) 
 
     ota_partition = esp_ota_get_next_update_partition(NULL);
     if (!ota_partition) { // Invalid OTA partition
+        ota_in_progress = false;
         return ERR_CODE_FAIL; 
     }
 
@@ -58,6 +59,8 @@ types_error_code_e ota_process_write_block(const uint8_t *data, const size_t dat
     esp_err_t err = esp_ota_write(ota_handle, data, data_len);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Erro na escrita OTA: %s", esp_err_to_name(err));
+        ota_in_progress = false;
+        updated_fmw_size = 0;
         return ERR_CODE_FAIL;
     }
 
@@ -72,13 +75,18 @@ types_error_code_e ota_process_write_block(const uint8_t *data, const size_t dat
         return ERR_CODE_IN_PROGRESS;
 
     } else if (updated_fmw_size > fmw_size) {
+        ESP_LOGE(TAG, "Tamanho do firmware atualizado difere do recebido.");
+        ota_in_progress = false;
+        updated_fmw_size = 0;
         return ERR_CODE_FAIL;
 
     } else {
-        uint8_t calc_hash[HASH_SIZE_IN_BYTES] = {};
+        uint8_t calc_hash[HASH_SIZE_IN_BYTES] = {0};
 
         if (ota_process_compute_hash(calc_hash) != 0) {
             ESP_LOGE(TAG, "Falha ao computar hash SHA-256");
+            ota_in_progress = false;
+            updated_fmw_size = 0;
             return ERR_CODE_FAIL;
         }
 
@@ -99,10 +107,17 @@ int ota_process_compute_hash(uint8_t *out_sha256) {
 
 }
 
-types_error_code_e ota_process_end() {
+types_error_code_e ota_process_end(bool is_healthy) {
 
     if (!ota_in_progress) { 
         return ERR_CODE_NOT_ALLOWED;
+    }
+
+    if (!is_healthy) {
+        ESP_LOGE(TAG, "Atualização OTA interrompida. Sistema não-saudável.");
+        ota_in_progress = false;
+        updated_fmw_size = 0;
+        return ERR_CODE_FAIL;
     }
 
     // Finish OTA update
@@ -127,7 +142,9 @@ static types_error_code_e ota_compare_hashes(const uint8_t *sent_hash, const uin
 
     for (int i = 0; i < HASH_SIZE_IN_BYTES; i++) {
         if (sent_hash[i] != calc_hash[i]) {
-            ESP_LOGE(TAG, "Hashes diferentes");
+            ESP_LOGE(TAG, "Hashes diferentes.");
+            ota_in_progress = false;
+            updated_fmw_size = 0;
             return ERR_CODE_FAIL;
         }
     }
@@ -135,8 +152,13 @@ static types_error_code_e ota_compare_hashes(const uint8_t *sent_hash, const uin
     return ERR_CODE_OK;
 }
 
-void ota_check_rollback() {
+void ota_check_rollback(bool is_healthy) {
 #if defined(CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE)
+
+    if (!is_healthy) {
+        ESP_LOGE(TAG, "Atualização OTA cancelada. Sistema não-saudável.");
+        esp_ota_mark_app_invalid_rollback_and_reboot();
+    }
 
     const esp_partition_t *running = esp_ota_get_running_partition();
     esp_ota_img_states_t state;
@@ -160,6 +182,7 @@ void ota_check_rollback() {
 
     } else {
         ESP_LOGE(TAG, "Erro ao obter estado da partição.");
+        esp_ota_mark_app_invalid_rollback_and_reboot();
     }
 
 #endif 

@@ -8,8 +8,8 @@
 
 types_error_code_e ota_process_init(const size_t, const uint8_t*);
 types_error_code_e ota_process_write_block(const uint8_t*, const size_t);
-types_error_code_e ota_process_end();
+types_error_code_e ota_process_end(bool);
 
-void ota_check_rollback();
+void ota_check_rollback(bool);
 
 #endif

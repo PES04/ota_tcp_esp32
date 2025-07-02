@@ -23,8 +23,6 @@ void app_main(void)
 {
     ESP_LOGI(tag, "----- Starting application -----");
     
-    ota_check_rollback();
-    
     if (sys_initializer_init() != ERR_CODE_OK)
     {
         
@@ -36,7 +34,7 @@ void app_main(void)
 
     wifi_ap_init();
     ESP_LOGI(tag, "----- wifi_ap: OK -----");
-
+    
     if (tcp_tls_init() != ERR_CODE_OK)
     {
         init_err();
@@ -45,6 +43,8 @@ void app_main(void)
     {
         ESP_LOGI(tag, "----- tcp_tls: OK -----");
     }
+
+    ota_check_rollback(true);
 }
 
 static void init_err(void)
@@ -53,5 +53,6 @@ static void init_err(void)
     {
         ESP_LOGE(tag, "----- Error initializing the system -----");
         vTaskDelay(pdMS_TO_TICKS(10000));
+        ota_check_rollback(false);
     }
 }

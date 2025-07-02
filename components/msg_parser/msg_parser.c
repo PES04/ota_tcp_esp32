@@ -77,6 +77,7 @@ types_error_code_e msg_parser_run(const uint8_t * p_data, const uint16_t len, ui
             
             if (err == ERR_CODE_OK) {
                 state_machine_instance.state = WRITE_FIRMWARE;
+                /* Fallthrough */
 
             } else {
                 status = err;
@@ -98,7 +99,8 @@ types_error_code_e msg_parser_run(const uint8_t * p_data, const uint16_t len, ui
                 state_machine_instance.firmware_bytes_read = 0;
                 memset(state_machine_instance.hash, 0, sizeof(state_machine_instance.hash));
 
-                err = ota_process_end();
+                bool no_err = (err == ERR_CODE_OK)? true : false;
+                err = ota_process_end(no_err);
                 state_machine_instance.state = READ_HEADER;
                 status = err;
             }
