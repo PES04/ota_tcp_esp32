@@ -4,6 +4,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "msg_parser.h"
+#include "ota_manager.h"
 
 
 #define FIRMWARE_LEN_SIZE_IN_BYTES          (4U)
@@ -32,7 +33,6 @@ typedef struct {
     uint8_t hash[HASH_SIZE_IN_BYTES];
     SemaphoreHandle_t semaphore;
 } state_machine_params_t;
-
 
 static state_machine_params_t state_machine_instance = {};
 
@@ -73,28 +73,34 @@ types_error_code_e msg_parser_run(const uint8_t * p_data, const uint16_t len, ui
         break;
 
         case START_OTA:
-            /* Start OTA here */
-            state_machine_instance.state = WRITE_FIRMWARE;
-            /* Fallthrough */
+            types_error_code_e err = ota_process_init(state_machine_instance.firmware_size, state_machine_instance.hash);
+            
+            if (err == ERR_CODE_OK) {
+                state_machine_instance.state = WRITE_FIRMWARE;
+                /* Fallthrough */
+
+            } else {
+                status = err;
+            }
 
         case WRITE_FIRMWARE:
         {
             state_machine_instance.firmware_bytes_read += len;
 
-            types_error_code_e err = ERR_CODE_OK; /* Call OTA write here */
+            types_error_code_e err = ota_process_write_block(p_data, len);
 
             if ((err == ERR_CODE_OK) || (err == ERR_CODE_FAIL))
             {
                 /* Externalize firmware bytes read */
                 *p_out_bytes_read = state_machine_instance.firmware_bytes_read;
-                
+
                 /* Clean parameters */
                 state_machine_instance.firmware_size = 0;
                 state_machine_instance.firmware_bytes_read = 0;
                 memset(state_machine_instance.hash, 0, sizeof(state_machine_instance.hash));
 
-                /* Call OTA end here */
-
+                bool no_err = (err == ERR_CODE_OK)? true : false;
+                err = ota_process_end(no_err);
                 state_machine_instance.state = READ_HEADER;
                 status = err;
             }

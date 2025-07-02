@@ -83,7 +83,7 @@ static types_error_code_e init_wifi_params(void)
         }
     }
 
-    /* SSID Parsing */
+    /* Password Parsing */
     token = strtok(NULL, ";");
     if (token == NULL)
     {

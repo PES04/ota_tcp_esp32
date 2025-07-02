@@ -9,7 +9,7 @@
 #include "msg_parser.h"
 #include "auth_hmac.h"
 #include "tcp_tls.h"
-
+#include "ota_manager.h"
 
 #define COUNT_NEEDED_TO_START_TCP_SOCKET        (2U)
 #define TCP_BUFFER_LEN_BYTES                    (2048U)
@@ -175,7 +175,7 @@ static void tcp_tls_task(void * params)
         struct sockaddr_storage source_addr = {};
         socklen_t addr_len = sizeof(source_addr);
 
-        ESP_LOGI(tag, "----- Wainting for a connection -----");
+        ESP_LOGI(tag, "----- Waiting for a connection -----");
         int sock = accept(listen_sock, (struct sockaddr *)&source_addr, &addr_len);
         if (sock < 0)
         {
