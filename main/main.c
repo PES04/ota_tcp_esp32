@@ -25,7 +25,7 @@ void app_main(void)
     
     if (sys_initializer_init() != ERR_CODE_OK)
     {
-        
+        init_err();
     }
     else
     {
@@ -52,7 +52,6 @@ static void init_err(void)
     while (1)
     {
         ESP_LOGE(tag, "----- Error initializing the system -----");
-        vTaskDelay(pdMS_TO_TICKS(10000));
         ota_check_rollback(false);
     }
 }

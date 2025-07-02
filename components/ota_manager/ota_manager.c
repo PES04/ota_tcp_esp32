@@ -18,7 +18,7 @@ static size_t updated_fmw_size = 0;
 static uint8_t sent_hash[HASH_SIZE_IN_BYTES] = {0};
 
 static int ota_process_compute_hash(uint8_t *out_sha256);
-static types_error_code_e ota_compare_hashes(const uint8_t *sent_hash, const uint8_t *calc_hash);
+static types_error_code_e ota_compare_hashes(const uint8_t *recv_hash, const uint8_t *calc_hash);
 
 
 types_error_code_e ota_process_init(const size_t img_size, const uint8_t* hash) {
@@ -137,11 +137,11 @@ types_error_code_e ota_process_end(bool is_healthy) {
     return ERR_CODE_OK;
 }
 
-static types_error_code_e ota_compare_hashes(const uint8_t *sent_hash, const uint8_t *calc_hash) {
+static types_error_code_e ota_compare_hashes(const uint8_t *recv_hash, const uint8_t *calc_hash) {
     ESP_LOGI(TAG, "OTA process compare hashes");
 
     for (int i = 0; i < HASH_SIZE_IN_BYTES; i++) {
-        if (sent_hash[i] != calc_hash[i]) {
+        if (recv_hash[i] != calc_hash[i]) {
             ESP_LOGE(TAG, "Hashes diferentes.");
             ota_in_progress = false;
             updated_fmw_size = 0;
