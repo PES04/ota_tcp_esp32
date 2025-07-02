@@ -5,7 +5,7 @@
 #include "freertos/semphr.h"
 #include "msg_parser.h"
 #include "ota_manager.h"
-
+#include "sys_feedback.h"
 
 #define FIRMWARE_LEN_SIZE_IN_BYTES          (4U)
 #define HASH_SIZE_IN_BYTES                  (32U)
@@ -79,6 +79,9 @@ types_error_code_e msg_parser_run(const uint8_t * p_data, const uint16_t len, ui
                 status = err;
                 break;   
             } 
+
+            sys_feedback_set_update_mode();
+            
             state_machine_instance.state = WRITE_FIRMWARE;
             /* Fallthrough */
 
@@ -99,6 +102,9 @@ types_error_code_e msg_parser_run(const uint8_t * p_data, const uint16_t len, ui
                 memset(state_machine_instance.hash, 0, sizeof(state_machine_instance.hash));
 
                 err = (err == ERR_CODE_OK)? ota_process_end(true) : ota_process_end(false);
+                
+                sys_feedback_set_normal_mode();
+                
                 state_machine_instance.state = READ_HEADER;
                 status = err;
             }
