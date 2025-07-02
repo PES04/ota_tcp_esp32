@@ -69,8 +69,6 @@ types_error_code_e ota_process_write_block(const uint8_t *data, const size_t dat
 
     updated_fmw_size += data_len;
 
-    ESP_LOGI(TAG, "Updated firmware size: %zu / %zu", updated_fmw_size, fmw_size);
-
     if (updated_fmw_size < fmw_size) {
         return ERR_CODE_IN_PROGRESS;
 
@@ -90,12 +88,6 @@ types_error_code_e ota_process_write_block(const uint8_t *data, const size_t dat
             return ERR_CODE_FAIL;
         }
 
-        ESP_LOGI(TAG, "Hash recebido:");
-        ESP_LOG_BUFFER_HEX(TAG, sent_hash, HASH_SIZE_IN_BYTES);
-        ESP_LOGI(TAG, "Hash calculado:");
-        ESP_LOG_BUFFER_HEX(TAG, calc_hash, HASH_SIZE_IN_BYTES);
-
-        
         return (ota_compare_hashes(sent_hash, calc_hash));     
     }
 }
@@ -177,7 +169,7 @@ void ota_check_rollback(bool is_healthy) {
             }
 
         } else {
-            ESP_LOGI(TAG, "Firmware já validado.");
+            ESP_LOGI(TAG, "----- Firmware já validado -----");
         }
 
     } else {

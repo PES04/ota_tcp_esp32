@@ -276,6 +276,7 @@ static types_error_code_e run_conn_rx(esp_tls_t *tls, const uint8_t * rx_buffer,
         }
 
         if (err == ERR_CODE_OK) {
+            vTaskDelay(pdMS_TO_TICKS(1000));
             esp_restart();
         }
     }
