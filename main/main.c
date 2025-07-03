@@ -10,11 +10,14 @@
 #include "ota_manager.h"
 #include "sys_feedback.h"
 
-#define VERSION_MAJOR       (3)
-#define VERSION_MINOR       (0)
-#define VERSION_PATCH       (0)
+
+#define VERSION_MAJOR       (1U)
+#define VERSION_MINOR       (0U)
+#define VERSION_PATCH       (0U)
+
 
 static const char *tag = "MAIN";
+
 
 static void init_err(void);
 
@@ -61,6 +64,10 @@ void app_main(void)
     ota_check_rollback(true);
 }
 
+/**
+ * @brief Invalid the current firmware and reset the system
+ * 
+ */
 static void init_err(void)
 {
     while (1)
