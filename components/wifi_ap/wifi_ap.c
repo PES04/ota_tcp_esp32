@@ -25,8 +25,10 @@ static char wifi_ap_ssid[WIFI_AP_SSID_MAX_LEN] = {};
 static char wifi_ap_password[WIFI_AP_PASSWORD_MAX_LEN] = {};
 
 /* ---------------------------- Private Function ---------------------------- */
+
 static void wifi_init_softap(void);
 static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data);
+
 /* -------------------------------------------------------------------------- */
 
 
@@ -170,4 +172,3 @@ static void wifi_init_softap(void)
 
     ESP_LOGI(tag, "----- Wi-Fi AP Mode Initialized -----");
 }
-
