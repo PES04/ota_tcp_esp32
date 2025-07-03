@@ -19,6 +19,7 @@ static types_error_code_e init_auth_hmac_params(void);
 /**
  * @brief Initialize the sys_initializer component
  * 
+ * @return types_error_code_e 
  */
 types_error_code_e sys_initializer_init(void)
 {
@@ -53,6 +54,7 @@ types_error_code_e sys_initializer_init(void)
 /**
  * @brief Initialize the wifi parameters
  * 
+ * @return types_error_code_e 
  */
 static types_error_code_e init_wifi_params(void)
 {
@@ -106,6 +108,7 @@ static types_error_code_e init_wifi_params(void)
 /**
  * @brief Initialize the TLS connection asssets
  * 
+ * @return types_error_code_e 
  */
 static types_error_code_e init_tcp_tls_params(void)
 {
@@ -138,6 +141,7 @@ static types_error_code_e init_tcp_tls_params(void)
 /**
  * @brief Initialize the HMAC authentication parameters (pre-shared Key)
  * 
+ * @return types_error_code_e 
  */
 static types_error_code_e init_auth_hmac_params(void)
 {
