@@ -14,6 +14,8 @@
 #define VERSION_MINOR       (0U)
 #define VERSION_PATCH       (0U)
 
+#define RESET_DELAY_MS      (1000)
+
 
 static const char *tag = "MAIN";
 
@@ -73,5 +75,6 @@ static void init_err(void)
     {
         ESP_LOGE(tag, "----- Error initializing the system -----");
         ota_check_rollback(false);
+        vTaskDelay(pdMS_TO_TICKS(RESET_DELAY_MS));
     }
 }
