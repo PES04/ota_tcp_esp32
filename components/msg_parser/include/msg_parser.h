@@ -1,6 +1,7 @@
 #ifndef MSG_PARSER_H
 #define MSG_PARSER_H
 
+#include <stdint.h>
 #include <stdbool.h>
 
 #include "types.h"

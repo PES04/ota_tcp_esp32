@@ -3,9 +3,9 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
-#include "msg_parser.h"
 #include "ota_manager.h"
 #include "sys_feedback.h"
+#include "msg_parser.h"
 
 #define FIRMWARE_LEN_SIZE_IN_BYTES          (4U)
 #define HASH_SIZE_IN_BYTES                  (32U)
@@ -15,6 +15,8 @@
 #define OTA_ACK_SIZE_IN_BYTES               (6U)
 #define OTA_ACK_LEN_SIZE_IN_BYTES           (4U)
 #define OTA_ACK_ERR_SIZE_IN_BYTE            (2U)
+#define OTA_ACK_OK_CODE                     (100U)
+#define OTA_ACK_FAIL_CODE                   (100U)
 
 /* ---------- FIRMWARE ACK PARAMETERS ---------- */
 #define FIRMWARE_ACK_SIZE_IN_BYTES          (4U)
@@ -34,12 +36,17 @@ typedef struct {
     SemaphoreHandle_t semaphore;
 } state_machine_params_t;
 
+
 static state_machine_params_t state_machine_instance = {};
 
 
 static void parse_header(const uint8_t * p_data, uint32_t * p_firmware_size, uint8_t * p_hash);
 
-
+/**
+ * @brief Initialize the msg_parser component
+ * 
+ * @return types_error_code_e 
+ */
 types_error_code_e msg_parser_init(void)
 {
     vSemaphoreCreateBinary(state_machine_instance.semaphore);
@@ -53,6 +60,14 @@ types_error_code_e msg_parser_init(void)
     return ERR_CODE_OK;
 }
 
+/**
+ * @brief Msg_parser state machine, responsible for parse the incoming messagens
+ * 
+ * @param p_data [in]: Message data buffer
+ * @param len [in]: Message data buffer length
+ * @param p_out_bytes_read [out]: Number os bytes read
+ * @return types_error_code_e 
+ */
 types_error_code_e msg_parser_run(const uint8_t * p_data, const uint16_t len, uint32_t * p_out_bytes_read)
 {
     xSemaphoreTake(state_machine_instance.semaphore, portMAX_DELAY);
@@ -121,6 +136,10 @@ types_error_code_e msg_parser_run(const uint8_t * p_data, const uint16_t len, ui
     return status;
 }
 
+/**
+ * @brief Reset msg_parser state machine parameters
+ * 
+ */
 void msg_parser_clean(void)
 {
     xSemaphoreTake(state_machine_instance.semaphore, portMAX_DELAY);
@@ -133,6 +152,14 @@ void msg_parser_clean(void)
     xSemaphoreGive(state_machine_instance.semaphore);
 }
 
+/**
+ * @brief Build the firmware ack message
+ * 
+ * @param p_buffer [in]: Message data buffer
+ * @param len [in]: Message data buffer length
+ * @param p_out_len [out]: Built frame length
+ * @return types_error_code_e 
+ */
 types_error_code_e msg_parser_build_firmware_ack(uint8_t * p_buffer, const uint8_t len, uint8_t * p_out_len)
 {
     if (len < FIRMWARE_ACK_SIZE_IN_BYTES)
@@ -148,6 +175,16 @@ types_error_code_e msg_parser_build_firmware_ack(uint8_t * p_buffer, const uint8
     return ERR_CODE_OK;
 }
 
+/**
+ * @brief 
+ * 
+ * @param p_buffer [in]: Message data buffer
+ * @param len [in]: Message data buffer length
+ * @param status [in]: True for success e false for fail
+ * @param bytes_read [in]: Number of bytes read
+ * @param p_out_len [out]: Built frame length
+ * @return types_error_code_e 
+ */
 types_error_code_e msg_parser_build_ota_ack(uint8_t * p_buffer, 
                                             const uint8_t len, 
                                             const bool status,
@@ -165,7 +202,7 @@ types_error_code_e msg_parser_build_ota_ack(uint8_t * p_buffer,
         msg[i] = (bytes_read >> (i * 8U)) & 0xFF;
     }
 
-    uint16_t err_code = (status == true) ? 100U : 200U;
+    uint16_t err_code = (status == true) ? OTA_ACK_OK_CODE : OTA_ACK_FAIL_CODE;
     for (uint8_t i = 0; i < OTA_ACK_ERR_SIZE_IN_BYTE; i++)
     {
         msg[i + OTA_ACK_LEN_SIZE_IN_BYTES] = (err_code >> (i * 8U)) & 0xFF;
@@ -177,6 +214,13 @@ types_error_code_e msg_parser_build_ota_ack(uint8_t * p_buffer,
     return ERR_CODE_OK;
 }
 
+/**
+ * @brief Parse header message
+ * 
+ * @param p_data [in]: Message data buffer
+ * @param p_firmware_size [out]: Firmware size received
+ * @param p_hash [out]: Hash received
+ */
 static void parse_header(const uint8_t * p_data, uint32_t * p_firmware_size, uint8_t * p_hash)
 {
     for (uint8_t i = 0; i < FIRMWARE_LEN_SIZE_IN_BYTES; i++)
