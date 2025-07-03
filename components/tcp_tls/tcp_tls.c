@@ -8,8 +8,9 @@
 #include "esp_tls.h"
 #include "msg_parser.h"
 #include "auth_hmac.h"
-#include "tcp_tls.h"
 #include "ota_manager.h"
+#include "tcp_tls.h"
+
 
 #define PINNED_CORE                             (1)
 
@@ -36,14 +37,17 @@ static crypt_buffer_t server_crt = {};
 static crypt_buffer_t server_key = {};
 
 /* ------------------- Private Functions ------------------- */
+
 static void tcp_tls_task(void * params);
 static types_error_code_e run_conn_rx(esp_tls_t *tls, const uint8_t * rx_buffer, const int32_t rx_len);
 static types_error_code_e hmac_validation(esp_tls_t * tls, uint8_t * p_rx_buffer, const uint32_t len_rx_buffer);
+
 /* --------------------------------------------------------- */
 
 /**
  * @brief Initialize the tcp_tls component
  * 
+ * @return types_error_code_e 
  */
 types_error_code_e tcp_tls_init(void)
 {
@@ -60,6 +64,8 @@ types_error_code_e tcp_tls_init(void)
  * 
  * @param crt [in]: Server certificate
  * @param len [in]: Server certificate length in bytes
+ * 
+ * @return types_error_code_e 
  */
 types_error_code_e tcp_tls_set_server_crt(const uint8_t *crt, const size_t len)
 {
@@ -93,6 +99,8 @@ types_error_code_e tcp_tls_set_server_crt(const uint8_t *crt, const size_t len)
  * 
  * @param key [in]: Server key
  * @param len [in]: Server key length in bytes
+ * 
+ * @return types_error_code_e 
  */
 types_error_code_e tcp_tls_set_server_key(const uint8_t *key, const size_t len)
 {
@@ -251,6 +259,14 @@ static void tcp_tls_task(void * params)
     vTaskDelete(NULL);
 }
 
+/**
+ * @brief Run sockt receive logic
+ * 
+ * @param tls [in]: TLS handle
+ * @param rx_buffer [in]: Socket receive buffer
+ * @param rx_len [in]: Socket receive buffer length
+ * @return types_error_code_e 
+ */
 static types_error_code_e run_conn_rx(esp_tls_t *tls, const uint8_t * rx_buffer, const int32_t rx_len)
 {
     uint32_t firmware_bytes_read = 0;
@@ -284,6 +300,14 @@ static types_error_code_e run_conn_rx(esp_tls_t *tls, const uint8_t * rx_buffer,
     return ERR_CODE_OK;
 }
 
+/**
+ * @brief HMAC validation routine
+ * 
+ * @param tls [in]: TLS handle
+ * @param p_rx_buffer [in]: Socket receive buffer
+ * @param len_rx_buffer [in]: Socket receive buffer length
+ * @return types_error_code_e 
+ */
 static types_error_code_e hmac_validation(esp_tls_t * tls, uint8_t * p_rx_buffer, const uint32_t len_rx_buffer)
 {
     uint8_t tx_buffer[AUTH_HMAC_NONCE_LEN] = {};
