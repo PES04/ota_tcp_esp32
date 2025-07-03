@@ -27,26 +27,25 @@ static struct {
  */
 types_error_code_e auth_hmac_set_hmac_psk(const uint8_t *key, const size_t len)
 {  
-  if (psk.is_set == true)
-  {
-    ESP_LOGE(tag, "----- Shared key already set -----");
-    return ERR_CODE_NOT_ALLOWED;
-  }
-  
-  if (len == 0 || len > AUTH_HMAC_MAX_BUFFER_LEN)
-  {
-    ESP_LOGE(tag, "----- Shared key invalid range -----");
-    return ERR_CODE_INVALID_PARAM;
-  }
+    if (psk.is_set == true)
+    {
+        ESP_LOGE(tag, "----- Shared key already set -----");
+        return ERR_CODE_NOT_ALLOWED;
+    }
+    
+    if (len == 0 || len > AUTH_HMAC_MAX_BUFFER_LEN)
+    {
+        ESP_LOGE(tag, "----- Shared key invalid range -----");
+        return ERR_CODE_INVALID_PARAM;
+    }
 
-  memcpy(psk.val, key, len);
-  psk.len = len;
-  psk.is_set = true;
-  ESP_LOGI(tag, "----- Shared key has set -----");
+    memcpy(psk.val, key, len);
+    psk.len = len;
+    psk.is_set = true;
+    ESP_LOGI(tag, "----- Shared key has set -----");
 
-  return ERR_CODE_OK;
+    return ERR_CODE_OK;
 }
-
 
 /**
  * @brief Generate a random nonce for HMAC authentication
@@ -56,8 +55,8 @@ types_error_code_e auth_hmac_set_hmac_psk(const uint8_t *key, const size_t len)
  */
 void auth_hmac_generate_nonce(uint8_t *nonce, size_t len)
 {
-  esp_fill_random(nonce, len); // Fill nonce param with random bytes
-  ESP_LOGI(tag, "----- Nonce generated -----");
+    esp_fill_random(nonce, len); // Fill nonce param with random bytes
+    ESP_LOGI(tag, "----- Nonce generated -----");
 }
 
 /**
@@ -71,49 +70,49 @@ void auth_hmac_generate_nonce(uint8_t *nonce, size_t len)
  */
 bool auth_hmac_verify_response(const uint8_t *nonce, size_t nonce_len, const uint8_t *received_hmac, size_t received_len)
 {
-  ESP_LOGI(tag, "----- Starting HMAC verification -----");
+    ESP_LOGI(tag, "----- Starting HMAC verification -----");
 
-  if (received_len != HMAC_SHA256_LEN) // Sanity check for HMAC length
-  {
-    ESP_LOGW(tag, "----- Invalid HMAC response length -----");
-    return false;
-  }
+    if (received_len != HMAC_SHA256_LEN) // Sanity check for HMAC length
+    {
+        ESP_LOGW(tag, "----- Invalid HMAC response length -----");
+        return false;
+    }
 
-  uint8_t calculated_hmac[HMAC_SHA256_LEN] = {0};
-  const mbedtls_md_info_t *md_info = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256); // Use SHA-256 for HMAC
-  if (md_info == NULL)
-  {
-    ESP_LOGE(tag, "----- mbedtls_md_info_from_type failed -----");
-    return false;
-  }
+    uint8_t calculated_hmac[HMAC_SHA256_LEN] = {0};
+    const mbedtls_md_info_t *md_info = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256); // Use SHA-256 for HMAC
+    if (md_info == NULL)
+    {
+        ESP_LOGE(tag, "----- mbedtls_md_info_from_type failed -----");
+        return false;
+    }
 
-  mbedtls_md_context_t ctx;
-  mbedtls_md_init(&ctx);
+    mbedtls_md_context_t ctx;
+    mbedtls_md_init(&ctx);
 
-  if (mbedtls_md_setup(&ctx, md_info, 1) != 0) // enable HMAC
-  {
-    ESP_LOGE(tag, "----- mbedtls_md_setup failed -----");
-    mbedtls_md_free(&ctx);
-    return false;
-  }
+    if (mbedtls_md_setup(&ctx, md_info, 1) != 0) // enable HMAC
+    {
+        ESP_LOGE(tag, "----- mbedtls_md_setup failed -----");
+        mbedtls_md_free(&ctx);
+        return false;
+    }
 
-  if (mbedtls_md_hmac_starts(&ctx, psk.val, psk.len) != 0 ||
-      mbedtls_md_hmac_update(&ctx, nonce, nonce_len) != 0 || // Update with nonce
-      mbedtls_md_hmac_finish(&ctx, calculated_hmac) != 0) // Compute HMAC
-  {
-    ESP_LOGE(tag, "----- Error during HMAC computation -----");
-    mbedtls_md_free(&ctx);
-    return false;
-  }
+    if (mbedtls_md_hmac_starts(&ctx, psk.val, psk.len) != 0 ||
+        mbedtls_md_hmac_update(&ctx, nonce, nonce_len) != 0 || // Update with nonce
+        mbedtls_md_hmac_finish(&ctx, calculated_hmac) != 0) // Compute HMAC
+    {
+        ESP_LOGE(tag, "----- Error during HMAC computation -----");
+        mbedtls_md_free(&ctx);
+        return false;
+    }
 
-  mbedtls_md_free(&ctx); 
+    mbedtls_md_free(&ctx); 
 
-  bool valid = memcmp(received_hmac, calculated_hmac, HMAC_SHA256_LEN) == 0; // Compare received HMAC with calculated HMAC memories
+    bool valid = memcmp(received_hmac, calculated_hmac, HMAC_SHA256_LEN) == 0; // Compare received HMAC with calculated HMAC memories
 
-  if (valid)
-    ESP_LOGI(tag, "----- HMAC successfully verified -----");
-  else
-    ESP_LOGW(tag, "----- Invalid HMAC -----");
+    if (valid)
+        ESP_LOGI(tag, "----- HMAC successfully verified -----");
+    else
+        ESP_LOGW(tag, "----- Invalid HMAC -----");
 
-  return valid;
+    return valid;
 }

@@ -1,7 +1,9 @@
 #ifndef AUTH_HMAC_H
 #define AUTH_HMAC_H
 
+#include <stdint.h>
 #include <stdbool.h>
+
 #include "types.h"
 
 

@@ -24,6 +24,7 @@
 #define RX_TIMEOUT_SEC                          (10)
 #define RX_TIMEOUT_USEC                         (0)
 
+#define DELAY_AFTER_UPDATE_MS                   (200)
 
 typedef struct {
     uint8_t val[TCP_TLS_MAX_BUFFER_LEN];
@@ -292,7 +293,7 @@ static types_error_code_e run_conn_rx(esp_tls_t *tls, const uint8_t * rx_buffer,
         }
 
         if (err == ERR_CODE_OK) {
-            vTaskDelay(pdMS_TO_TICKS(1000));
+            vTaskDelay(pdMS_TO_TICKS(DELAY_AFTER_UPDATE_MS));
             esp_restart();
         }
     }
