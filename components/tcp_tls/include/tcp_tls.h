@@ -1,9 +1,10 @@
 #ifndef TCP_TLS
 #define TCP_TLS
 
-#define TCP_TLS_MAX_BUFFER_LEN      (4198U)
-
+#include <stdint.h>
 #include "types.h"
+
+#define TCP_TLS_MAX_BUFFER_LEN      (4198U)
 
 types_error_code_e tcp_tls_init(void);
 
