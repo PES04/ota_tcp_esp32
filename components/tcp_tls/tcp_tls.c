@@ -21,8 +21,8 @@
 #define KEEPINTERVAL_SEC                        (5)
 #define KEEPCOUNT                               (2)
 
-#define RX_TIMEOUT_SEC                          (10)
-#define RX_TIMEOUT_USEC                         (0)
+#define RX_TIMEOUT_SEC                          (0)
+#define RX_TIMEOUT_USEC                         (500000)
 
 #define DELAY_AFTER_UPDATE_MS                   (200)
 

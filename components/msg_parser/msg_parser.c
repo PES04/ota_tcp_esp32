@@ -88,16 +88,23 @@ types_error_code_e msg_parser_run(const uint8_t * p_data, const uint16_t len, ui
         break;
 
         case START_OTA:
-            types_error_code_e err = ota_process_init(state_machine_instance.firmware_size, state_machine_instance.hash);
-            
-            if (err != ERR_CODE_OK) {
-                status = err;
-                break;   
-            } 
+        {
+            if (ota_process_init(state_machine_instance.firmware_size, state_machine_instance.hash) != ERR_CODE_OK)
+            {
+                ota_process_end(false);
+                
+                types_error_code_e err = ota_process_init(state_machine_instance.firmware_size, state_machine_instance.hash);
+                if (err != ERR_CODE_OK)
+                {
+                    status = err;
+                    break;
+                }
+            }
 
             sys_feedback_set_update_mode();
             
             state_machine_instance.state = WRITE_FIRMWARE;
+        }
             /* Fallthrough */
 
         case WRITE_FIRMWARE:
@@ -148,6 +155,8 @@ void msg_parser_clean(void)
     state_machine_instance.firmware_size = 0;
     state_machine_instance.firmware_bytes_read = 0;
     memset(state_machine_instance.hash, 0, sizeof(state_machine_instance.hash));
+
+    sys_feedback_set_normal_mode();
 
     xSemaphoreGive(state_machine_instance.semaphore);
 }
