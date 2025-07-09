@@ -1,7 +1,10 @@
 #ifndef TYPES_H
 #define TYPES_H
 
-/* Error codes types */
+/**
+ * @brief Error code types
+ * 
+ */
 typedef enum {
     ERR_CODE_OK,
     ERR_CODE_IN_PROGRESS,

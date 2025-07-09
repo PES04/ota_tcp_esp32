@@ -4,7 +4,12 @@
 #include <stdint.h>
 #include "types.h"
 
-/* Sys_feedback modes */
+/**
+ * @brief Sys_feedback modes
+ * 
+ * Values used to indicate the system mode
+ * 
+ */
 typedef enum {
     SYS_FEEDBACK_MODE_UPDATE,
     SYS_FEEDBACK_MODE_NORMAL
