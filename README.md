@@ -16,6 +16,7 @@ Este projeto, **ota_tcp_esp32**, implementa uma solução de atualização Over-
 - `components/`: Módulos reutilizáveis, como drivers, bibliotecas e middlewares personalizados utilizados pelo firmware;
 - `nvs_config/`: Arquivos para configuração da NVS (Non-Volatile Storage) do ESP32;
 - `scripts/`: Scripts auxiliares para configuração da NVS;
+- `docs/` : Documentação do códgio;
 - `Doxyfile`: Arquivo de configuração para geração automática da documentação com o Doxygen;
 - `sdkconfig`: Arquivo de configuração do projeto gerado pelo ESP-IDF;
 - `README.md`: Descrição do projeto.
