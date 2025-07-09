@@ -3,4 +3,6 @@ build
 sdkconfig.*
 nvs_config/*
 !nvs_config/nvs_config.csv
-docs
+docs/html
+docs/latex/*
+!docs/latex/refman.pdf
